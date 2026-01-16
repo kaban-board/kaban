@@ -115,6 +115,7 @@ export const MoveTaskInputSchema = z.object({
 export const ListTasksFilterSchema = z.object({
   columnId: ColumnIdSchema.optional(),
   agent: AgentNameSchema.optional(),
+  assignee: AgentNameSchema.optional(),
   blocked: z.boolean().optional(),
 });
 

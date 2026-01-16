@@ -1,11 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import { ulid } from "ulid";
+import { type DB, tasks } from "../db/index.js";
 import type {
   AddTaskInput as AddTaskInputSchema,
   ListTasksFilter as ListTasksFilterSchema,
   UpdateTaskInput as UpdateTaskInputSchema,
 } from "../schemas.js";
-import { type DB, tasks } from "../db/index.js";
 import type { Task } from "../types.js";
 import { ExitCode, KabanError } from "../types.js";
 import { validateAgentName, validateColumnId, validateTitle } from "../validation.js";
@@ -88,6 +88,9 @@ export class TaskService {
     }
     if (filter?.agent) {
       conditions.push(eq(tasks.createdBy, filter.agent));
+    }
+    if (filter?.assignee) {
+      conditions.push(eq(tasks.assignedTo, filter.assignee));
     }
     if (filter?.blocked === true) {
       conditions.push(sql`${tasks.blockedReason} IS NOT NULL`);
