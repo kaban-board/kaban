@@ -3,20 +3,17 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "kaban": "./dist/index.js"
+    "kaban": "./src/index.ts"
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
-    "build:bin": "bun build --compile --minify ./src/index.ts --outfile ./dist/kaban",
-    "build:bin:all": "bun run build:bin:linux && bun run build:bin:macos && bun run build:bin:windows",
-    "build:bin:linux": "bun build --compile --minify --target=bun-linux-x64 ./src/index.ts --outfile ./dist/kaban-linux-x64",
-    "build:bin:macos": "bun build --compile --minify --target=bun-darwin-arm64 ./src/index.ts --outfile ./dist/kaban-darwin-arm64",
-    "build:bin:windows": "bun build --compile --minify --target=bun-windows-x64 ./src/index.ts --outfile ./dist/kaban-windows-x64.exe",
+    "dev": "bun run ./src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@kaban/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^12.0.0"
   },
   "devDependencies": {

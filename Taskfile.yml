@@ -2,6 +2,8 @@ version: '3'
 
 vars:
   INSTALL_DIR: '{{.INSTALL_DIR | default "/usr/local/bin"}}'
+  PROJECT_DIR:
+    sh: pwd
 
 tasks:
   default:
@@ -15,40 +17,36 @@ tasks:
       - bun install
       - bun run build
 
-  build:bin:
-    desc: Build CLI and TUI binaries
+  install:
+    desc: Install kaban wrapper script to system
     deps: [build]
     cmds:
-      - cd packages/cli && bun run build:bin
-      - cd packages/tui && bun run build:bin
-
-  install:
-    desc: Build and install binaries to system
-    deps: [build:bin]
-    cmds:
       - |
+        WRAPPER='#!/bin/bash
+        exec bun run "{{.PROJECT_DIR}}/packages/cli/src/index.ts" "$@"'
         if [ -w "{{.INSTALL_DIR}}" ]; then
-          cp packages/cli/dist/kaban "{{.INSTALL_DIR}}/kaban"
-          cp packages/tui/dist/kaban-tui "{{.INSTALL_DIR}}/kaban-tui"
+          echo "$WRAPPER" > "{{.INSTALL_DIR}}/kaban"
+          chmod +x "{{.INSTALL_DIR}}/kaban"
         else
-          sudo cp packages/cli/dist/kaban "{{.INSTALL_DIR}}/kaban"
-          sudo cp packages/tui/dist/kaban-tui "{{.INSTALL_DIR}}/kaban-tui"
+          echo "$WRAPPER" | sudo tee "{{.INSTALL_DIR}}/kaban" > /dev/null
+          sudo chmod +x "{{.INSTALL_DIR}}/kaban"
         fi
-      - echo "Installed kaban and kaban-tui to {{.INSTALL_DIR}}"
+        echo "Installed kaban to {{.INSTALL_DIR}}"
+        echo "Note: Requires bun and project at {{.PROJECT_DIR}}"
 
   uninstall:
-    desc: Remove binaries from system
+    desc: Remove kaban from system
     cmds:
       - |
         if [ -w "{{.INSTALL_DIR}}" ]; then
-          rm -f "{{.INSTALL_DIR}}/kaban" "{{.INSTALL_DIR}}/kaban-tui"
+          rm -f "{{.INSTALL_DIR}}/kaban"
         else
-          sudo rm -f "{{.INSTALL_DIR}}/kaban" "{{.INSTALL_DIR}}/kaban-tui"
+          sudo rm -f "{{.INSTALL_DIR}}/kaban"
         fi
-      - echo "Uninstalled kaban and kaban-tui from {{.INSTALL_DIR}}"
+      - echo "Uninstalled kaban from {{.INSTALL_DIR}}"
 
   update:
-    desc: Rebuild and reinstall binaries
+    desc: Rebuild and reinstall
     cmds:
       - task: install
 
