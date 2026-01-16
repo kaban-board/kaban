@@ -53,21 +53,32 @@ const openDeleteModal: KeyHandler = async (state) => {
 };
 
 const buttonSelectPrev: KeyHandler = (state) => {
+  if (state.taskInput?.focused) return;
   state.buttonRow?.selectPrev();
 };
 
 const buttonSelectNext: KeyHandler = (state) => {
+  if (state.taskInput?.focused) return;
   state.buttonRow?.selectNext();
 };
 
 const buttonTrigger: KeyHandler = (state) => {
-  if (state.taskInput && state.taskInput.focused) return;
+  if (state.taskInput?.focused) return;
   state.buttonRow?.triggerSelected();
 };
 
 const focusButtons: KeyHandler = (state) => {
   state.taskInput?.blur();
-  state.buttonRow?.render();
+  state.buttonRow?.setFocused(true);
+};
+
+const focusInput: KeyHandler = (state) => {
+  state.buttonRow?.setFocused(false);
+  state.taskInput?.focus();
+};
+
+const confirmModal: KeyHandler = async (state) => {
+  await state.onModalConfirm?.();
 };
 
 const modalBindings: Record<ModalType, KeyBindings> = {
@@ -90,6 +101,7 @@ const modalBindings: Record<ModalType, KeyBindings> = {
     right: buttonSelectNext,
     tab: focusButtons,
     down: focusButtons,
+    up: focusInput,
     return: buttonTrigger,
   },
   moveTask: {
@@ -101,9 +113,14 @@ const modalBindings: Record<ModalType, KeyBindings> = {
     right: buttonSelectNext,
     tab: focusButtons,
     down: focusButtons,
+    up: focusInput,
     return: buttonTrigger,
   },
-  deleteTask: {},
+  deleteTask: {
+    y: confirmModal,
+    n: closeModal,
+    escape: closeModal,
+  },
   help: {
     [WILDCARD]: closeModal,
   },

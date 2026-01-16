@@ -121,11 +121,15 @@ export async function showOnboarding(renderer: CliRenderer): Promise<string> {
     const keyBindings: Record<string, () => void> = {
       tab: () => {
         input.blur();
-        buttonRow.render();
+        buttonRow.setFocused(true);
       },
       down: () => {
         input.blur();
-        buttonRow.render();
+        buttonRow.setFocused(true);
+      },
+      up: () => {
+        buttonRow.setFocused(false);
+        input.focus();
       },
       left: () => buttonRow.selectPrev(),
       right: () => buttonRow.selectNext(),

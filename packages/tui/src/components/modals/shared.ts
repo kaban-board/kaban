@@ -7,5 +7,7 @@ export function closeModal(state: AppState): void {
   }
   state.taskInput = null;
   state.buttonRow = null;
+  state.selectedTask = null;
+  state.onModalConfirm = null;
   state.activeModal = "none";
 }

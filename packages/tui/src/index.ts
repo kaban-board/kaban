@@ -54,6 +54,7 @@ async function main() {
     modalOverlay: null,
     taskInput: null,
     buttonRow: null,
+    onModalConfirm: null,
   };
 
   await refreshBoard(state);

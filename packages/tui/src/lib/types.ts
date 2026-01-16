@@ -26,6 +26,7 @@ export interface AppState {
   modalOverlay: BoxRenderable | null;
   taskInput: InputRenderable | null;
   buttonRow: ButtonRowState | null;
+  onModalConfirm: (() => void | Promise<void>) | null;
 }
 
 export function getSelectedTaskId(state: AppState): string | null {
@@ -36,5 +37,6 @@ export function getSelectedTaskId(state: AppState): string | null {
   if (!select) return null;
 
   const selected = select.getSelectedOption();
-  return (selected?.value as string) ?? null;
+  const value = selected?.value;
+  return typeof value === "string" ? value : null;
 }

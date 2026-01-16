@@ -94,20 +94,9 @@ export async function showDeleteTaskModal(
 
   state.modalOverlay = overlay;
   state.activeModal = "deleteTask";
-
-  const keyHandler = async (key: { name: string }) => {
-    if (key.name === "y") {
-      renderer.keyInput.off("keypress", keyHandler);
-      await state.taskService.deleteTask(taskId);
-      state.selectedTask = null;
-      closeModal(state);
-      await onDeleted();
-    } else if (key.name === "n" || key.name === "escape") {
-      renderer.keyInput.off("keypress", keyHandler);
-      state.selectedTask = null;
-      closeModal(state);
-    }
+  state.onModalConfirm = async () => {
+    await state.taskService.deleteTask(taskId);
+    closeModal(state);
+    await onDeleted();
   };
-
-  renderer.keyInput.on("keypress", keyHandler);
 }

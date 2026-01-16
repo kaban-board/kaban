@@ -113,7 +113,10 @@ export async function showAssignTaskModal(
   dialog.add(buttonRow.container);
   renderer.root.add(overlay);
 
-  setImmediate(() => input.focus());
+  setImmediate(() => {
+    buttonRow.setFocused(false);
+    input.focus();
+  });
 
   state.modalOverlay = overlay;
   state.taskInput = input;

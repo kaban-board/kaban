@@ -13,6 +13,7 @@ import { closeModal } from "./shared.js";
 export function showAddTaskModal(state: AppState, onTaskCreated: () => Promise<void>): void {
   const { renderer, columns, currentColumnIndex } = state;
   const column = columns[currentColumnIndex];
+  if (!column) return;
 
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "add-task-dialog",
@@ -86,7 +87,10 @@ export function showAddTaskModal(state: AppState, onTaskCreated: () => Promise<v
   dialog.add(buttonRow.container);
   renderer.root.add(overlay);
 
-  setImmediate(() => input.focus());
+  setImmediate(() => {
+    buttonRow.setFocused(false);
+    input.focus();
+  });
 
   state.modalOverlay = overlay;
   state.taskInput = input;
