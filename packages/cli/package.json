@@ -7,6 +7,11 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
+    "build:bin": "bun build --compile --minify ./src/index.ts --outfile ./dist/kaban",
+    "build:bin:all": "bun run build:bin:linux && bun run build:bin:macos && bun run build:bin:windows",
+    "build:bin:linux": "bun build --compile --minify --target=bun-linux-x64 ./src/index.ts --outfile ./dist/kaban-linux-x64",
+    "build:bin:macos": "bun build --compile --minify --target=bun-darwin-arm64 ./src/index.ts --outfile ./dist/kaban-darwin-arm64",
+    "build:bin:windows": "bun build --compile --minify --target=bun-windows-x64 ./src/index.ts --outfile ./dist/kaban-windows-x64.exe",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

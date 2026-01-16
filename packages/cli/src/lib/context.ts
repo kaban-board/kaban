@@ -27,6 +27,15 @@ export function getContext(): KabanContext {
   return { db, config, boardService, taskService };
 }
 
+export function getKabanPaths() {
+  const kabanDir = join(process.cwd(), ".kaban");
+  return {
+    kabanDir,
+    dbPath: join(kabanDir, "board.db"),
+    configPath: join(kabanDir, "config.json"),
+  };
+}
+
 export function getAgent(): string {
   return process.env.KABAN_AGENT ?? "user";
 }

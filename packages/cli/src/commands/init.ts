@@ -1,15 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { BoardService, type Config, createDb, DEFAULT_CONFIG, initializeSchema } from "@kaban/core";
 import { Command } from "commander";
+import { getKabanPaths } from "../lib/context.js";
 
 export const initCommand = new Command("init")
   .description("Initialize a new Kaban board in the current directory")
   .option("-n, --name <name>", "Board name", "Kaban Board")
-  .action((options) => {
-    const kabanDir = join(process.cwd(), ".kaban");
-    const dbPath = join(kabanDir, "board.db");
-    const configPath = join(kabanDir, "config.json");
+  .action(async (options) => {
+    const { kabanDir, dbPath, configPath } = getKabanPaths();
 
     if (existsSync(dbPath)) {
       console.error("Error: Board already exists in this directory");
@@ -25,9 +23,9 @@ export const initCommand = new Command("init")
     writeFileSync(configPath, JSON.stringify(config, null, 2));
 
     const db = createDb(dbPath);
-    initializeSchema(db);
+    await initializeSchema(db);
     const boardService = new BoardService(db);
-    boardService.initializeBoard(config);
+    await boardService.initializeBoard(config);
 
     console.log(`Initialized Kaban board: ${options.name}`);
     console.log(`  Database: ${dbPath}`);

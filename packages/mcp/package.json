@@ -1,0 +1,25 @@
+{
+  "name": "@kaban/mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "kaban-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && tsc --emitDeclarationOnly --declaration --outDir ./dist",
+    "dev": "bun run --watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kaban/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "zod": "^4.3.5",
+    "zod-to-json-schema": "3.23.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

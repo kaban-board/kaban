@@ -6,33 +6,27 @@ import type { Board, Column, Config } from "../types.js";
 export class BoardService {
   constructor(private db: DB) {}
 
-  initializeBoard(config: Config): Board {
+  async initializeBoard(config: Config): Promise<Board> {
     const now = new Date();
     const boardId = ulid();
 
-    this.db
-      .insert(boards)
-      .values({
-        id: boardId,
-        name: config.board.name,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
+    await this.db.insert(boards).values({
+      id: boardId,
+      name: config.board.name,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     for (let i = 0; i < config.columns.length; i++) {
       const col = config.columns[i];
-      this.db
-        .insert(columns)
-        .values({
-          id: col.id,
-          boardId,
-          name: col.name,
-          position: i,
-          wipLimit: col.wipLimit ?? null,
-          isTerminal: col.isTerminal ?? false,
-        })
-        .run();
+      await this.db.insert(columns).values({
+        id: col.id,
+        boardId,
+        name: col.name,
+        position: i,
+        wipLimit: col.wipLimit ?? null,
+        isTerminal: col.isTerminal ?? false,
+      });
     }
 
     return {
@@ -43,27 +37,22 @@ export class BoardService {
     };
   }
 
-  getBoard(): Board | null {
-    const row = this.db.select().from(boards).limit(1).get();
-    return row ?? null;
+  async getBoard(): Promise<Board | null> {
+    const rows = await this.db.select().from(boards).limit(1);
+    return rows[0] ?? null;
   }
 
-  getColumns(): Column[] {
-    return this.db.select().from(columns).orderBy(columns.position).all();
+  async getColumns(): Promise<Column[]> {
+    return this.db.select().from(columns).orderBy(columns.position);
   }
 
-  getColumn(id: string): Column | null {
-    const row = this.db.select().from(columns).where(eq(columns.id, id)).get();
-    return row ?? null;
+  async getColumn(id: string): Promise<Column | null> {
+    const rows = await this.db.select().from(columns).where(eq(columns.id, id));
+    return rows[0] ?? null;
   }
 
-  getTerminalColumn(): Column | null {
-    const row = this.db.select().from(columns).where(eq(columns.isTerminal, true)).get();
-    return row ?? null;
-  }
-
-  getTaskCountInColumn(columnId: string): number {
-    const result = this.db.select().from(columns).where(eq(columns.id, columnId)).get();
-    return result ? 0 : 0;
+  async getTerminalColumn(): Promise<Column | null> {
+    const rows = await this.db.select().from(columns).where(eq(columns.isTerminal, true));
+    return rows[0] ?? null;
   }
 }

@@ -4,6 +4,8 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "build": "bun run --filter '*' build",
+    "build:bin": "bun run --filter @kaban/cli build:bin",
+    "build:bin:all": "bun run --filter @kaban/cli build:bin:all",
     "test": "bun run --filter '*' test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome lint .",

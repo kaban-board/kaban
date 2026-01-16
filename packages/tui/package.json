@@ -1,0 +1,23 @@
+{
+  "name": "@kaban/tui",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "kaban-tui": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
+    "build:bin": "bun build --compile --minify ./src/index.ts --outfile ./dist/kaban-tui",
+    "dev": "bun run ./src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kaban/core": "workspace:*",
+    "@opentui/core": "^0.1.69"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

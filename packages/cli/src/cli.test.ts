@@ -41,22 +41,25 @@ describe("CLI Integration", () => {
     expect(agentList).not.toContain("Task 1");
 
     const jsonOutput = run("list --json");
-    const tasks = JSON.parse(jsonOutput);
-    expect(tasks).toHaveLength(3);
+    const jsonResponse = JSON.parse(jsonOutput);
+    expect(jsonResponse.success).toBe(true);
+    expect(jsonResponse.data).toHaveLength(3);
 
     const statusOutput = run("status");
     expect(statusOutput).toContain("Test Board");
 
-    const taskId = tasks[0].id.slice(0, 8);
+    const taskId = jsonResponse.data[0].id.slice(0, 8);
     run(`move ${taskId} in_progress`);
 
     const afterMove = run("list --json");
-    const movedTask = JSON.parse(afterMove).find((t: { id: string }) => t.id.startsWith(taskId));
+    const afterMoveResponse = JSON.parse(afterMove);
+    const movedTask = afterMoveResponse.data.find((t: { id: string }) => t.id.startsWith(taskId));
     expect(movedTask.columnId).toBe("in_progress");
 
     run(`done ${taskId}`);
     const afterDone = run("list --json");
-    const doneTask = JSON.parse(afterDone).find((t: { id: string }) => t.id.startsWith(taskId));
+    const afterDoneResponse = JSON.parse(afterDone);
+    const doneTask = afterDoneResponse.data.find((t: { id: string }) => t.id.startsWith(taskId));
     expect(doneTask.columnId).toBe("done");
     expect(doneTask.completedAt).not.toBeNull();
   });

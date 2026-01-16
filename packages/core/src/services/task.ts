@@ -1,37 +1,22 @@
 import { and, eq, sql } from "drizzle-orm";
 import { ulid } from "ulid";
+import type {
+  AddTaskInput as AddTaskInputSchema,
+  ListTasksFilter as ListTasksFilterSchema,
+  UpdateTaskInput as UpdateTaskInputSchema,
+} from "../schemas.js";
 import { type DB, tasks } from "../db/index.js";
 import type { Task } from "../types.js";
 import { ExitCode, KabanError } from "../types.js";
 import { validateAgentName, validateColumnId, validateTitle } from "../validation.js";
 import type { BoardService } from "./board.js";
 
-export interface AddTaskInput {
-  title: string;
-  description?: string;
-  columnId?: string;
-  agent?: string;
-  dependsOn?: string[];
-  files?: string[];
-  labels?: string[];
-}
-
-export interface ListTasksFilter {
-  columnId?: string;
-  agent?: string;
-  blocked?: boolean;
-}
+export type AddTaskInput = AddTaskInputSchema;
+export type ListTasksFilter = ListTasksFilterSchema;
+export type UpdateTaskInput = UpdateTaskInputSchema;
 
 export interface MoveTaskOptions {
   force?: boolean;
-}
-
-export interface UpdateTaskInput {
-  title?: string;
-  description?: string;
-  assignedTo?: string | null;
-  files?: string[];
-  labels?: string[];
 }
 
 export class TaskService {
@@ -40,20 +25,20 @@ export class TaskService {
     private boardService: BoardService,
   ) {}
 
-  private getTaskOrThrow(id: string): Task {
-    const task = this.getTask(id);
+  private async getTaskOrThrow(id: string): Promise<Task> {
+    const task = await this.getTask(id);
     if (!task) {
       throw new KabanError(`Task '${id}' not found`, ExitCode.NOT_FOUND);
     }
     return task;
   }
 
-  addTask(input: AddTaskInput): Task {
+  async addTask(input: AddTaskInput): Promise<Task> {
     const title = validateTitle(input.title);
     const agent = input.agent ? validateAgentName(input.agent) : "user";
     const columnId = input.columnId ? validateColumnId(input.columnId) : "todo";
 
-    const column = this.boardService.getColumn(columnId);
+    const column = await this.boardService.getColumn(columnId);
     if (!column) {
       throw new KabanError(`Column '${columnId}' does not exist`, ExitCode.VALIDATION);
     }
@@ -61,48 +46,42 @@ export class TaskService {
     const now = new Date();
     const id = ulid();
 
-    const maxPosition = this.db
+    const maxPositionResult = await this.db
       .select({ max: sql<number>`COALESCE(MAX(position), -1)` })
       .from(tasks)
-      .where(eq(tasks.columnId, columnId))
-      .get();
+      .where(eq(tasks.columnId, columnId));
 
-    const position = (maxPosition?.max ?? -1) + 1;
+    const position = (maxPositionResult[0]?.max ?? -1) + 1;
 
-    this.db
-      .insert(tasks)
-      .values({
-        id,
-        title,
-        description: input.description ?? null,
-        columnId,
-        position,
-        createdBy: agent,
-        assignedTo: null,
-        parentId: null,
-        dependsOn: input.dependsOn ?? [],
-        files: input.files ?? [],
-        labels: input.labels ?? [],
-        blockedReason: null,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-        startedAt: null,
-        completedAt: null,
-      })
-      .run();
+    await this.db.insert(tasks).values({
+      id,
+      title,
+      description: input.description ?? null,
+      columnId,
+      position,
+      createdBy: agent,
+      assignedTo: null,
+      parentId: null,
+      dependsOn: input.dependsOn ?? [],
+      files: input.files ?? [],
+      labels: input.labels ?? [],
+      blockedReason: null,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      startedAt: null,
+      completedAt: null,
+    });
 
     return this.getTaskOrThrow(id);
   }
 
-  getTask(id: string): Task | null {
-    const row = this.db.select().from(tasks).where(eq(tasks.id, id)).get();
-    return row ?? null;
+  async getTask(id: string): Promise<Task | null> {
+    const rows = await this.db.select().from(tasks).where(eq(tasks.id, id));
+    return rows[0] ?? null;
   }
 
-  listTasks(filter?: ListTasksFilter): Task[] {
-    let query = this.db.select().from(tasks);
-
+  async listTasks(filter?: ListTasksFilter): Promise<Task[]> {
     const conditions = [];
     if (filter?.columnId) {
       conditions.push(eq(tasks.columnId, filter.columnId));
@@ -115,35 +94,39 @@ export class TaskService {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as typeof query;
+      return this.db
+        .select()
+        .from(tasks)
+        .where(and(...conditions))
+        .orderBy(tasks.columnId, tasks.position);
     }
 
-    return query.orderBy(tasks.columnId, tasks.position).all();
+    return this.db.select().from(tasks).orderBy(tasks.columnId, tasks.position);
   }
 
-  deleteTask(id: string): void {
-    const task = this.getTask(id);
+  async deleteTask(id: string): Promise<void> {
+    const task = await this.getTask(id);
     if (!task) {
       throw new KabanError(`Task '${id}' not found`, ExitCode.NOT_FOUND);
     }
 
-    this.db.delete(tasks).where(eq(tasks.id, id)).run();
+    await this.db.delete(tasks).where(eq(tasks.id, id));
   }
 
-  moveTask(id: string, columnId: string, options?: MoveTaskOptions): Task {
-    const task = this.getTask(id);
+  async moveTask(id: string, columnId: string, options?: MoveTaskOptions): Promise<Task> {
+    const task = await this.getTask(id);
     if (!task) {
       throw new KabanError(`Task '${id}' not found`, ExitCode.NOT_FOUND);
     }
 
     validateColumnId(columnId);
-    const column = this.boardService.getColumn(columnId);
+    const column = await this.boardService.getColumn(columnId);
     if (!column) {
       throw new KabanError(`Column '${columnId}' does not exist`, ExitCode.VALIDATION);
     }
 
     if (column.wipLimit && !options?.force) {
-      const count = this.getTaskCountInColumn(columnId);
+      const count = await this.getTaskCountInColumn(columnId);
       if (count >= column.wipLimit) {
         throw new KabanError(
           `Column '${column.name}' at WIP limit (${count}/${column.wipLimit}). Move a task out first.`,
@@ -155,15 +138,14 @@ export class TaskService {
     const now = new Date();
     const isTerminal = column.isTerminal;
 
-    const maxPosition = this.db
+    const maxPositionResult = await this.db
       .select({ max: sql<number>`COALESCE(MAX(position), -1)` })
       .from(tasks)
-      .where(eq(tasks.columnId, columnId))
-      .get();
+      .where(eq(tasks.columnId, columnId));
 
-    const newPosition = (maxPosition?.max ?? -1) + 1;
+    const newPosition = (maxPositionResult[0]?.max ?? -1) + 1;
 
-    this.db
+    await this.db
       .update(tasks)
       .set({
         columnId,
@@ -173,14 +155,13 @@ export class TaskService {
         completedAt: isTerminal ? now : task.completedAt,
         startedAt: columnId === "in_progress" && !task.startedAt ? now : task.startedAt,
       })
-      .where(eq(tasks.id, id))
-      .run();
+      .where(eq(tasks.id, id));
 
     return this.getTaskOrThrow(id);
   }
 
-  updateTask(id: string, input: UpdateTaskInput, expectedVersion?: number): Task {
-    const task = this.getTask(id);
+  async updateTask(id: string, input: UpdateTaskInput, expectedVersion?: number): Promise<Task> {
+    const task = await this.getTask(id);
     if (!task) {
       throw new KabanError(`Task '${id}' not found`, ExitCode.NOT_FOUND);
     }
@@ -213,25 +194,23 @@ export class TaskService {
       updates.labels = input.labels;
     }
 
-    this.db
+    await this.db
       .update(tasks)
       .set(updates)
       .where(
         expectedVersion !== undefined
           ? and(eq(tasks.id, id), eq(tasks.version, expectedVersion))
           : eq(tasks.id, id),
-      )
-      .run();
+      );
 
     return this.getTaskOrThrow(id);
   }
 
-  private getTaskCountInColumn(columnId: string): number {
-    const result = this.db
+  private async getTaskCountInColumn(columnId: string): Promise<number> {
+    const result = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(tasks)
-      .where(eq(tasks.columnId, columnId))
-      .get();
-    return result?.count ?? 0;
+      .where(eq(tasks.columnId, columnId));
+    return result[0]?.count ?? 0;
   }
 }

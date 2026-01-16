@@ -1,29 +1,39 @@
-import { Database } from "bun:sqlite";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient, type Client } from "@libsql/client";
+import * as schema from "./schema.js";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "./schema.js";
 
 export * from "./schema.js";
 
 export type DB = ReturnType<typeof createDb>;
 
-export function createDb(dbPath: string) {
-  const dir = dirname(dbPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-
-  const sqlite = new Database(dbPath);
-  sqlite.exec("PRAGMA journal_mode = WAL;");
-
-  return drizzle(sqlite, { schema });
+export interface DbConfig {
+  url: string;
+  authToken?: string;
 }
 
-export function initializeSchema(db: DB) {
-  const sqlite = (db as unknown as { $client: Database }).$client;
+export function createDb(config: DbConfig | string) {
+  const dbConfig = typeof config === "string" ? { url: `file:${config}` } : config;
 
-  sqlite.exec(`
+  if (dbConfig.url.startsWith("file:")) {
+    const filePath = dbConfig.url.replace("file:", "");
+    const dir = dirname(filePath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  const client = createClient(dbConfig);
+  return drizzle(client, { schema });
+}
+
+export async function initializeSchema(db: DB) {
+  const client = (db as unknown as { $client: Client }).$client;
+
+  await client.executeMultiple(`
+    PRAGMA journal_mode = WAL;
+
     CREATE TABLE IF NOT EXISTS boards (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

@@ -1,6 +1,7 @@
 import { KabanError } from "@kaban/core";
 import { Command } from "commander";
 import { getContext } from "../lib/context.js";
+import { outputError, outputSuccess } from "../lib/json-output.js";
 
 export const listCommand = new Command("list")
   .description("List tasks")
@@ -8,18 +9,19 @@ export const listCommand = new Command("list")
   .option("-a, --agent <agent>", "Filter by agent")
   .option("-b, --blocked", "Show only blocked tasks")
   .option("-j, --json", "Output as JSON")
-  .action((options) => {
+  .action(async (options) => {
+    const json = options.json;
     try {
       const { taskService, boardService } = getContext();
 
-      const tasks = taskService.listTasks({
+      const tasks = await taskService.listTasks({
         columnId: options.column,
         agent: options.agent,
         blocked: options.blocked,
       });
 
-      if (options.json) {
-        console.log(JSON.stringify(tasks, null, 2));
+      if (json) {
+        outputSuccess(tasks);
         return;
       }
 
@@ -28,7 +30,7 @@ export const listCommand = new Command("list")
         return;
       }
 
-      const columns = boardService.getColumns();
+      const columns = await boardService.getColumns();
       const columnMap = new Map(columns.map((c) => [c.id, c]));
 
       for (const task of tasks) {
@@ -41,6 +43,7 @@ export const listCommand = new Command("list")
       }
     } catch (error) {
       if (error instanceof KabanError) {
+        if (json) outputError(error.code, error.message);
         console.error(`Error: ${error.message}`);
         process.exit(error.code);
       }

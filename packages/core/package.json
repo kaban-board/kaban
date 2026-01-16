@@ -16,10 +16,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "drizzle-orm": "^0.38.0",
-    "ulid": "^2.3.0"
+    "ulid": "^2.3.0",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@libsql/darwin-arm64": "^0.5.22",
     "@types/bun": "latest",
     "typescript": "^5.0.0"
   }

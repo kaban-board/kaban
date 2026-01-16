@@ -4,4 +4,21 @@ dist
 *.log
 .kaban
 .kaban-test*
+
+# Bun
 bun.lockb
+*.bun-build
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Test coverage
+coverage
+
+# Environment
+.env
+.env.local
+.env.*.local

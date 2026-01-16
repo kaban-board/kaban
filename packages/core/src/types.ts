@@ -1,53 +1,6 @@
-export interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  columnId: string;
-  position: number;
-  createdBy: string;
-  assignedTo: string | null;
-  parentId: string | null;
-  dependsOn: string[];
-  files: string[];
-  labels: string[];
-  blockedReason: string | null;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  startedAt: Date | null;
-  completedAt: Date | null;
-}
+import type { Config } from "./schemas.js";
 
-export interface Column {
-  id: string;
-  name: string;
-  position: number;
-  wipLimit: number | null;
-  isTerminal: boolean;
-}
-
-export interface Board {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Config {
-  board: {
-    name: string;
-  };
-  columns: Array<{
-    id: string;
-    name: string;
-    wipLimit?: number;
-    isTerminal?: boolean;
-  }>;
-  defaults: {
-    column: string;
-    agent: string;
-  };
-}
+export { type Task, type Column, type Board, type Config } from "./schemas.js";
 
 export const DEFAULT_CONFIG: Config = {
   board: {
@@ -57,7 +10,7 @@ export const DEFAULT_CONFIG: Config = {
     { id: "backlog", name: "Backlog" },
     { id: "todo", name: "Todo" },
     { id: "in_progress", name: "In Progress", wipLimit: 3 },
-    { id: "review", name: "Review" },
+    { id: "review", name: "Review", wipLimit: 2 },
     { id: "done", name: "Done", isTerminal: true },
   ],
   defaults: {

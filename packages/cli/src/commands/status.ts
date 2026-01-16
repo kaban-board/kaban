@@ -1,15 +1,38 @@
 import { KabanError } from "@kaban/core";
 import { Command } from "commander";
 import { getContext } from "../lib/context.js";
+import { outputError, outputSuccess } from "../lib/json-output.js";
 
 export const statusCommand = new Command("status")
   .description("Show board status summary")
-  .action(() => {
+  .option("-j, --json", "Output as JSON")
+  .action(async (options) => {
+    const json = options.json;
     try {
       const { taskService, boardService } = getContext();
-      const board = boardService.getBoard();
-      const columns = boardService.getColumns();
-      const tasks = taskService.listTasks();
+      const board = await boardService.getBoard();
+      const columns = await boardService.getColumns();
+      const tasks = await taskService.listTasks();
+
+      if (json) {
+        const columnStats = columns.map((column) => {
+          const columnTasks = tasks.filter((t) => t.columnId === column.id);
+          return {
+            id: column.id,
+            name: column.name,
+            count: columnTasks.length,
+            wipLimit: column.wipLimit,
+            isTerminal: column.isTerminal,
+          };
+        });
+        outputSuccess({
+          board: { name: board?.name ?? "Kaban Board" },
+          columns: columnStats,
+          blockedCount: tasks.filter((t) => t.blockedReason).length,
+          totalTasks: tasks.length,
+        });
+        return;
+      }
 
       console.log(`\n  ${board?.name ?? "Kaban Board"}\n`);
 
@@ -30,6 +53,7 @@ export const statusCommand = new Command("status")
       console.log();
     } catch (error) {
       if (error instanceof KabanError) {
+        if (json) outputError(error.code, error.message);
         console.error(`Error: ${error.message}`);
         process.exit(error.code);
       }
