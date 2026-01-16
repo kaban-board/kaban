@@ -1,0 +1,95 @@
+{
+  "name": "kaban",
+  "version": "0.1.0",
+  "generated": "2026-01-16",
+  "description": "Terminal-based Kanban board for AI code agents and developers",
+  "runtime": "bun",
+  "packages": {
+    "core": {
+      "path": "packages/core",
+      "name": "@kaban/core",
+      "purpose": "Database, services, schemas, validation",
+      "exports": [
+        "createDb",
+        "initializeSchema",
+        "BoardService",
+        "TaskService",
+        "DEFAULT_CONFIG",
+        "TaskSchema",
+        "ColumnSchema",
+        "BoardSchema",
+        "ConfigSchema"
+      ],
+      "dependencies": ["@libsql/client", "drizzle-orm", "zod", "ulid"]
+    },
+    "cli": {
+      "path": "packages/cli",
+      "name": "@kaban/cli",
+      "purpose": "Unified CLI with mcp/tui subcommands",
+      "entry": "src/index.ts",
+      "commands": ["init", "add", "list", "move", "done", "status", "schema", "mcp", "tui"],
+      "features": {
+        "add": ["--description"],
+        "list": ["--sort name|date|updated", "--reverse", "--assignee"]
+      },
+      "dependencies": ["@kaban/core", "@modelcontextprotocol/sdk", "commander"]
+    },
+    "tui": {
+      "path": "packages/tui",
+      "name": "@kaban/tui",
+      "purpose": "Interactive terminal UI",
+      "entry": "src/index.ts",
+      "dependencies": ["@kaban/core", "@opentui/core"]
+    }
+  },
+  "entryPoints": {
+    "cli": "packages/cli/src/index.ts",
+    "mcp": "packages/cli/src/commands/mcp.ts",
+    "tui": "packages/cli/src/commands/tui.ts"
+  },
+  "database": {
+    "type": "sqlite",
+    "driver": "@libsql/client",
+    "orm": "drizzle-orm",
+    "tables": ["boards", "columns", "tasks", "undoLog"],
+    "location": ".kaban/board.db"
+  },
+  "mcp": {
+    "tools": [
+      "kaban_init",
+      "kaban_add_task",
+      "kaban_get_task",
+      "kaban_list_tasks",
+      "kaban_move_task",
+      "kaban_update_task",
+      "kaban_delete_task",
+      "kaban_complete_task",
+      "kaban_status"
+    ],
+    "resources": [
+      "kaban://board/status",
+      "kaban://board/columns",
+      "kaban://tasks/{columnId}",
+      "kaban://task/{id}"
+    ]
+  },
+  "config": {
+    "envVars": ["KABAN_PATH", "KABAN_AGENT"],
+    "files": [".kaban/config.json", ".kaban/board.db"]
+  },
+  "tests": {
+    "framework": "bun:test",
+    "files": [
+      "packages/core/src/validation.test.ts",
+      "packages/core/src/services/board.test.ts",
+      "packages/core/src/services/task.test.ts",
+      "packages/cli/src/cli.test.ts"
+    ]
+  },
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "install": "task install"
+  }
+}

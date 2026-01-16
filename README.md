@@ -4,9 +4,8 @@ Kaban is a terminal-based Kanban board specifically designed for AI code agents 
 
 Kaban is organized as a monorepo consisting of the following packages:
 - **@kaban/core**: Core library containing database logic, services, and schemas.
-- **@kaban/cli**: Command-line interface for quick task management.
+- **@kaban/cli**: Unified CLI with commands for task management, TUI launcher, and MCP server.
 - **@kaban/tui**: Interactive Terminal User Interface for visual board management.
-- **@kaban/mcp**: Model Context Protocol (MCP) server for integration with AI agents like Claude.
 
 ## Installation
 
@@ -21,21 +20,24 @@ cd KabanProject
 task install
 ```
 
+This creates a wrapper script at `/usr/local/bin/kaban` that invokes `bun run` with the CLI entry point. The project directory must remain in place.
+
 ### Manual Setup
 ```bash
 bun install
 bun run build
+# Run directly without installing
+bun run packages/cli/src/index.ts --help
 ```
 
 ### Task Commands
 
 | Command | Description |
 |:---|:---|
-| `task install` | Build and install binaries to /usr/local/bin |
-| `task uninstall` | Remove binaries from system |
-| `task update` | Rebuild and reinstall binaries |
+| `task install` | Build and install wrapper script to /usr/local/bin |
+| `task uninstall` | Remove kaban from system |
+| `task update` | Rebuild and reinstall |
 | `task build` | Build all packages |
-| `task build:bin` | Build CLI and TUI binaries |
 | `task clean` | Remove build artifacts |
 | `task dev:cli` | Run CLI in development mode |
 | `task dev:tui` | Run TUI in development mode |
@@ -60,6 +62,8 @@ The Kaban CLI allows you to interact with your board directly from the terminal.
 | `kaban done` | Mark a task as completed (moves to terminal column). |
 | `kaban status` | Show a summary of the board status. |
 | `kaban schema` | Output JSON schemas for validation. |
+| `kaban tui` | Start interactive Terminal UI. |
+| `kaban mcp` | Start MCP server for AI agent integration. |
 
 ### Command Options
 
@@ -76,24 +80,30 @@ kaban init --name "My Project Board"
 Add a new task.
 - `-c, --column <column>`: Target column ID.
 - `-a, --agent <agent>`: Agent name creating the task.
+- `-D, --description <text>`: Task description.
 - `-d, --depends-on <ids>`: Comma-separated task IDs this task depends on.
 - `-j, --json`: Output result as JSON.
 
 Example:
 ```bash
-kaban add "Implement login feature" -c todo -a "claude-3-5"
+kaban add "Implement login feature" -c todo -a "claude" -D "Add OAuth2 login flow"
 ```
 
 #### `kaban list`
 List tasks.
 - `-c, --column <column>`: Filter by column ID.
-- `-a, --agent <agent>`: Filter by agent name.
+- `-a, --agent <agent>`: Filter by creator agent.
+- `-u, --assignee <agent>`: Filter by assigned agent.
 - `-b, --blocked`: Show only blocked tasks.
+- `-s, --sort <field>`: Sort by `name`, `date`, or `updated`.
+- `-r, --reverse`: Reverse sort order.
 - `-j, --json`: Output result as JSON.
 
-Example:
+Examples:
 ```bash
 kaban list --column in-progress
+kaban list --assignee claude --sort date --reverse
+kaban list --sort name
 ```
 
 #### `kaban move <id> [column]`
@@ -120,10 +130,8 @@ kaban done a1b2c3d4
 
 The TUI provides an interactive, visual representation of the Kanban board.
 
-To run the TUI:
 ```bash
-cd packages/tui
-bun run dev
+kaban tui
 ```
 
 ### Keyboard Shortcuts
@@ -149,7 +157,7 @@ Kaban includes an MCP server, allowing AI agents to perceive and manage the Kanb
 | `kaban_init` | Initialize board (name, path optional). |
 | `kaban_add_task` | Add task (title, columnId, agent, dependsOn, etc.). |
 | `kaban_get_task` | Get detailed information about a task by ID. |
-| `kaban_list_tasks` | List tasks with filters (columnId, agent, blocked). |
+| `kaban_list_tasks` | List tasks with filters (columnId, agent, assignee, blocked). |
 | `kaban_move_task` | Move task to a specific column. |
 | `kaban_update_task` | Update task properties (title, description, labels, etc.). |
 | `kaban_delete_task` | Remove a task from the board. |
@@ -171,8 +179,24 @@ Add the following to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "kaban": {
+      "command": "kaban",
+      "args": ["mcp"],
+      "env": {
+        "KABAN_PATH": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+Or run directly without installing:
+
+```json
+{
+  "mcpServers": {
+    "kaban": {
       "command": "bun",
-      "args": ["run", "/path/to/packages/mcp/dist/index.js"],
+      "args": ["run", "/path/to/KabanProject/packages/cli/src/index.ts", "mcp"],
       "env": {
         "KABAN_PATH": "/path/to/your/project"
       }

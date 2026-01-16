@@ -12,10 +12,11 @@
       "name": "@kaban/cli",
       "version": "0.1.0",
       "bin": {
-        "kaban": "./dist/index.js",
+        "kaban": "./src/index.ts",
       },
       "dependencies": {
         "@kaban/core": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.25.2",
         "commander": "^12.0.0",
       },
       "devDependencies": {
@@ -34,23 +35,6 @@
       },
       "devDependencies": {
         "@libsql/darwin-arm64": "^0.5.22",
-        "@types/bun": "latest",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/mcp": {
-      "name": "@kaban/mcp",
-      "version": "0.1.0",
-      "bin": {
-        "kaban-mcp": "./dist/index.js",
-      },
-      "dependencies": {
-        "@kaban/core": "workspace:*",
-        "@modelcontextprotocol/sdk": "^1.25.2",
-        "zod": "^4.3.5",
-        "zod-to-json-schema": "3.23.5",
-      },
-      "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.0.0",
       },
@@ -153,8 +137,6 @@
     "@kaban/cli": ["@kaban/cli@workspace:packages/cli"],
 
     "@kaban/core": ["@kaban/core@workspace:packages/core"],
-
-    "@kaban/mcp": ["@kaban/mcp@workspace:packages/mcp"],
 
     "@kaban/tui": ["@kaban/tui@workspace:packages/tui"],
 
@@ -586,7 +568,7 @@
 
     "zod": ["zod@4.3.5", "", {}, "sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g=="],
 
-    "zod-to-json-schema": ["zod-to-json-schema@3.23.5", "", { "peerDependencies": { "zod": "^3.23.3" } }, "sha512-5wlSS0bXfF/BrL4jPAbz9da5hDlDptdEppYfe+x4eIJ7jioqKG9uUxOwPzqof09u/XeVdrgFu29lZi+8XNDJtA=="],
+    "zod-to-json-schema": ["zod-to-json-schema@3.25.1", "", { "peerDependencies": { "zod": "^3.25 || ^4" } }, "sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA=="],
 
     "@jimp/plugin-blit/zod": ["zod@3.25.0", "", {}, "sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q=="],
 
@@ -620,8 +602,6 @@
 
     "@jimp/types/zod": ["zod@3.25.0", "", {}, "sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q=="],
 
-    "@modelcontextprotocol/sdk/zod-to-json-schema": ["zod-to-json-schema@3.25.1", "", { "peerDependencies": { "zod": "^3.25 || ^4" } }, "sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA=="],
-
     "cross-fetch/node-fetch": ["node-fetch@2.7.0", "", { "dependencies": { "whatwg-url": "^5.0.0" }, "peerDependencies": { "encoding": "^0.1.0" }, "optionalPeers": ["encoding"] }, "sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A=="],
 
     "image-q/@types/node": ["@types/node@16.9.1", "", {}, "sha512-QpLcX9ZSsq3YYUUnD3nFDY8H7wctAhQj/TFKL8Ya8v5fMm3CFXxo8zStsLAl780ltoYoo1WvKUVGBQK+1ifr7g=="],
@@ -631,8 +611,6 @@
     "prebuild-install/detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
 
     "readable-web-to-node-stream/readable-stream": ["readable-stream@4.7.0", "", { "dependencies": { "abort-controller": "^3.0.0", "buffer": "^6.0.3", "events": "^3.3.0", "process": "^0.11.10", "string_decoder": "^1.3.0" } }, "sha512-oIGGmcpTLwPga8Bn6/Z75SVaH1z5dUut2ibSyAMVhmUggWpmDn2dapB0n7f8nwaSiRtepAsfJyfXIO5DCVAODg=="],
-
-    "zod-to-json-schema/zod": ["zod@3.25.0", "", {}, "sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q=="],
 
     "readable-web-to-node-stream/readable-stream/buffer": ["buffer@6.0.3", "", { "dependencies": { "base64-js": "^1.3.1", "ieee754": "^1.2.1" } }, "sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA=="],
   }
