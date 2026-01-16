@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import { Database } from "bun:sqlite";
 import * as schema from "./schema.js";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -15,13 +15,13 @@ export function createDb(dbPath: string) {
   }
 
   const sqlite = new Database(dbPath);
-  sqlite.pragma("journal_mode = WAL");
+  sqlite.exec("PRAGMA journal_mode = WAL;");
 
   return drizzle(sqlite, { schema });
 }
 
 export function initializeSchema(db: DB) {
-  const sqlite = (db as unknown as { $client: Database.Database }).$client;
+  const sqlite = (db as unknown as { $client: Database }).$client;
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS boards (
