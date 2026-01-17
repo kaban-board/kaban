@@ -43,6 +43,7 @@
     "url": "https://github.com/beshkenadze/kaban/issues"
   },
   "license": "MIT",
+  "author": "Aleksandr Beshkenadze <beshkenadze@gmail.com>",
   "keywords": [
     "kanban",
     "database",
