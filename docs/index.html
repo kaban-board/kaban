@@ -188,8 +188,8 @@ task install</code></pre>
         <pre><code>{
   "mcpServers": {
     "kaban": {
-      "command": "kaban",
-      "args": ["mcp"],
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"],
       "env": {
         "KABAN_PATH": "/path/to/your/project"
       }
@@ -280,23 +280,22 @@ alias kaban="bun run $(pwd)/packages/cli/src/index.ts"</code></pre>
       </div>
 
       <h3>AI Code Editors</h3>
-      <p class="install-desc">Install Kaban as a skill/plugin or add the MCP server directly:</p>
+      <p class="install-desc">Add Kaban MCP server to your AI coding assistant:</p>
       
       <div class="ai-tools-grid">
         <div class="ai-tool">
           <div class="ai-tool-header">
-            <span class="ai-tool-name">Claude Code</span>
-            <span class="ai-tool-badge">plugin + mcp</span>
+            <span class="ai-tool-name">Claude Code / Desktop</span>
+            <span class="ai-tool-badge">mcp</span>
           </div>
           <div class="code-block">
-            <pre><code><span class="comment"># Install plugin</span>
-/plugin install kaban@github.com/beshkenadze/kaban/marketplace/kaban-workflow
-
-<span class="comment"># Or add MCP to .mcp.json</span>
+            <pre><code><span class="comment">// .mcp.json or claude_desktop_config.json</span>
 {
-  "kaban": {
-    "command": "kaban",
-    "args": ["mcp"]
+  "mcpServers": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
   }
 }</code></pre>
           </div>
@@ -305,48 +304,54 @@ alias kaban="bun run $(pwd)/packages/cli/src/index.ts"</code></pre>
         <div class="ai-tool">
           <div class="ai-tool-header">
             <span class="ai-tool-name">OpenCode</span>
-            <span class="ai-tool-badge">plugin + mcp</span>
+            <span class="ai-tool-badge">mcp</span>
           </div>
           <div class="code-block">
-            <pre><code><span class="comment"># Add plugin to opencode.jsonc</span>
+            <pre><code><span class="comment">// opencode.json</span>
 {
-  "plugin": ["kaban-workflow"]
-}
-
-<span class="comment"># Or add MCP server</span>
-opencode mcp add</code></pre>
+  "mcp": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
+  }
+}</code></pre>
           </div>
         </div>
         
         <div class="ai-tool">
           <div class="ai-tool-header">
-            <span class="ai-tool-name">Codex CLI</span>
-            <span class="ai-tool-badge">skill + mcp</span>
+            <span class="ai-tool-name">Cursor / Windsurf</span>
+            <span class="ai-tool-badge">mcp</span>
           </div>
           <div class="code-block">
-            <pre><code><span class="comment"># Install skill from GitHub</span>
-codex skill install --url \
-  github.com/beshkenadze/kaban/marketplace/kaban-workflow
-
-<span class="comment"># Or add MCP server</span>
-codex mcp add kaban -- kaban mcp</code></pre>
+            <pre><code><span class="comment">// MCP settings</span>
+{
+  "mcpServers": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
+  }
+}</code></pre>
           </div>
         </div>
         
         <div class="ai-tool">
           <div class="ai-tool-header">
-            <span class="ai-tool-name">Gemini CLI</span>
-            <span class="ai-tool-badge">extension + mcp</span>
+            <span class="ai-tool-name">Global Install</span>
+            <span class="ai-tool-badge">alternative</span>
           </div>
           <div class="code-block">
-            <pre><code><span class="comment"># Install extension</span>
-gemini extensions install \
-  https://github.com/beshkenadze/kaban
-
-<span class="comment"># Or add MCP to settings.json</span>
-{ "mcpServers": { "kaban": {
-  "command": "kaban", "args": ["mcp"]
-}}}</code></pre>
+            <pre><code><span class="comment">// If installed globally</span>
+{
+  "mcpServers": {
+    "kaban": {
+      "command": "kaban",
+      "args": ["mcp"]
+    }
+  }
+}</code></pre>
           </div>
         </div>
       </div>

@@ -106,6 +106,22 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"],
+      "env": {
+        "KABAN_PATH": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+Or if installed globally:
+
+```json
+{
+  "mcpServers": {
+    "kaban": {
       "command": "kaban",
       "args": ["mcp"],
       "env": {
@@ -202,53 +218,66 @@ kaban tui
 
 ## AI Code Editors
 
-Install Kaban as a skill/plugin or add the MCP server directly:
+Add Kaban MCP server to your AI coding assistant:
 
-### Claude Code
+### Claude Code / Claude Desktop
 
-```bash
-# Install plugin
-/plugin install kaban@github.com/beshkenadze/kaban/marketplace/kaban-workflow
+Add to `.mcp.json` (Claude Code) or `claude_desktop_config.json`:
 
-# Or add MCP to .mcp.json
+```json
 {
-  "kaban": {
-    "command": "kaban",
-    "args": ["mcp"]
+  "mcpServers": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
   }
 }
 ```
 
 ### OpenCode
 
-```jsonc
-// Add plugin to opencode.jsonc
+Add to `opencode.json`:
+
+```json
 {
-  "plugin": ["kaban-workflow"]
+  "mcp": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
+  }
 }
-
-// Or add MCP server
-opencode mcp add
 ```
 
-### Codex CLI
+### Cursor / Windsurf / Continue
 
-```bash
-# Install skill from GitHub
-codex skill install --url github.com/beshkenadze/kaban/marketplace/kaban-workflow
+Add to MCP settings:
 
-# Or add MCP server
-codex mcp add kaban -- kaban mcp
+```json
+{
+  "mcpServers": {
+    "kaban": {
+      "command": "npx",
+      "args": ["-y", "@kaban-board/cli", "mcp"]
+    }
+  }
+}
 ```
 
-### Gemini CLI
+### With Global Install
 
-```bash
-# Install extension
-gemini extensions install https://github.com/beshkenadze/kaban
+If you installed globally (`npm i -g @kaban-board/cli`), use:
 
-# Or add MCP to settings.json
-{ "mcpServers": { "kaban": { "command": "kaban", "args": ["mcp"] }}}
+```json
+{
+  "mcpServers": {
+    "kaban": {
+      "command": "kaban",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
 ## Configuration
