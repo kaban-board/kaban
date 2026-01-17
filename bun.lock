@@ -4,18 +4,22 @@
   "workspaces": {
     "": {
       "name": "kaban",
+      "dependencies": {
+        "@libsql/darwin-arm64": "^0.5.22",
+      },
       "devDependencies": {
         "@biomejs/biome": "^2.3.11",
       },
     },
     "packages/cli": {
       "name": "@kaban-board/cli",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "bin": {
         "kaban": "./dist/index.js",
       },
       "dependencies": {
         "@kaban-board/core": "workspace:*",
+        "@kaban-board/tui": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.25.2",
         "commander": "^12.0.0",
       },
@@ -26,7 +30,7 @@
     },
     "packages/core": {
       "name": "@kaban-board/core",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@libsql/client": "^0.17.0",
         "drizzle-orm": "^0.38.0",
@@ -40,7 +44,7 @@
     },
     "packages/tui": {
       "name": "@kaban-board/tui",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "bin": {
         "kaban-tui": "./dist/index.js",
       },
