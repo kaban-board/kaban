@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Persistent Kanban board workflow with TodoWrite sync and SessionStart resume",
   "author": {
-    "name": "Akira"
+    "name": "Aleksandr Beshkenadze",
+    "email": "beshkenadze@gmail.com"
   },
   "keywords": ["kanban", "todo", "workflow", "task-tracking"]
 }
