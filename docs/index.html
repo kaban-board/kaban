@@ -13,95 +13,177 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">
+        <img src="assets/icon.png" alt="Kaban">
+        <span>kaban</span>
+      </a>
+      <div class="nav-links">
+        <a href="#quickstart">quickstart</a>
+        <a href="#mcp">mcp</a>
+        <a href="#cli">cli</a>
+        <a href="#install">install</a>
+        <a href="https://github.com/beshkenadze/kaban">github</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <header class="hero">
       <div class="hero-content">
-        <img src="assets/icon.png" alt="Kaban" class="logo" onerror="this.style.display='none'">
-        <h1>Kaban</h1>
-        <p class="tagline">Kanban for AI Agents</p>
-        <p class="subtitle">Track and coordinate tasks between humans and AI agents in the terminal</p>
-        <div class="cta-buttons">
-          <a href="#quickstart" class="btn btn-primary">Get Started</a>
-          <a href="https://github.com/beshkenadze/kaban" class="btn btn-secondary">GitHub</a>
+        <div class="logo-row">
+          <img src="assets/icon.png" alt="Kaban" class="logo">
+          <h1>Kaban<span class="accent">_</span></h1>
+        </div>
+        <p class="tagline"><span class="prompt">&gt;</span> kanban for ai agents<span class="blink">_</span></p>
+        
+        <div class="features-inline">
+          <span><span class="marker">[x]</span> manage todos</span>
+          <span><span class="marker">[x]</span> assign to agents</span>
+          <span><span class="marker">[x]</span> single app, no servers</span>
+          <span><span class="marker">[x]</span> tui + cli + mcp</span>
+        </div>
+
+        <div class="cta-row">
+          <a href="#quickstart" class="btn btn-primary">&gt; get started</a>
+          <a href="https://github.com/beshkenadze/kaban" class="btn btn-secondary">github</a>
         </div>
       </div>
-      <div class="hero-terminal">
-        <div class="terminal-header">
-          <span class="terminal-dot red"></span>
-          <span class="terminal-dot yellow"></span>
-          <span class="terminal-dot green"></span>
-          <span class="terminal-title">kaban tui</span>
+
+      <div class="hero-screenshot">
+        <div class="screenshot-frame">
+          <div class="screenshot-header">
+            <span class="screenshot-dot red"></span>
+            <span class="screenshot-dot yellow"></span>
+            <span class="screenshot-dot green"></span>
+            <span class="screenshot-title">kaban tui</span>
+          </div>
+          <div class="screenshot-body">
+            <img src="assets/list_view.png" alt="Kaban TUI - Board View">
+          </div>
         </div>
-        <pre class="terminal-body">
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│  Backlog    │    Todo     │ In Progress │    Done     │
-├─────────────┼─────────────┼─────────────┼─────────────┤
-│             │ ► Add auth  │  Fix bug    │ ✓ Setup CI  │
-│             │   <span class="dim">claude</span>    │    <span class="dim">user</span>    │   <span class="dim">claude</span>   │
-│             │             │             │             │
-│             │   Add tests │             │ ✓ Init repo │
-│             │   <span class="dim">claude</span>    │             │    <span class="dim">user</span>    │
-└─────────────┴─────────────┴─────────────┴─────────────┘
- [a]dd [m]ove [d]el  [?]Help [q]uit</pre>
       </div>
     </header>
 
+    <section class="screenshots-section">
+      <div class="section-header">
+        <div class="section-label">// task details</div>
+        <h2>View and edit tasks</h2>
+      </div>
+      <div class="screenshot-frame">
+        <div class="screenshot-header">
+          <span class="screenshot-dot red"></span>
+          <span class="screenshot-dot yellow"></span>
+          <span class="screenshot-dot green"></span>
+          <span class="screenshot-title">task view</span>
+        </div>
+        <div class="screenshot-body">
+          <img src="assets/task_view.png" alt="Kaban TUI - Task View">
+        </div>
+      </div>
+    </section>
+
     <section class="features">
-      <h2>Why Kaban?</h2>
+      <div class="section-header">
+        <div class="section-label">// why kaban</div>
+        <h2>Built for developers and AI agents</h2>
+      </div>
       <div class="feature-grid">
         <div class="feature">
-          <div class="feature-icon">🤖</div>
-          <h3>MCP Native</h3>
-          <p>First-class integration with Claude Desktop and other MCP-compatible AI agents. Agents can read, create, and manage tasks autonomously.</p>
+          <div class="feature-icon">✓</div>
+          <h3>Manage Todos</h3>
+          <p>Track tasks with a proper Kanban board. Move between columns, set priorities, add descriptions.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">⌨️</div>
-          <h3>Terminal First</h3>
-          <p>Beautiful TUI with vim-style navigation. Powerful CLI for scripting and automation. No browser needed.</p>
+          <div class="feature-icon">◈</div>
+          <h3>Assign to Agents</h3>
+          <p>Assign tasks to Claude, GPT, or any AI agent. MCP and CLI for both humans and AIs.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">👥</div>
-          <h3>Human + AI</h3>
-          <p>Track who created and owns each task—whether it's you, Claude, or another agent. Coordinate multi-agent workflows.</p>
+          <div class="feature-icon">□</div>
+          <h3>Single App</h3>
+          <p>No servers, no cloud. One SQLite file. Works offline. Portable.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">📦</div>
-          <h3>Zero Config</h3>
-          <p>SQLite-based, portable, no server required. Just <code>kaban init</code> and start tracking. Works offline.</p>
+          <div class="feature-icon">&gt;_</div>
+          <h3>TUI + CLI</h3>
+          <p>Interactive terminal UI for humans. Powerful CLI for scripts and automation.</p>
         </div>
       </div>
     </section>
 
     <section id="quickstart" class="quickstart">
-      <h2>Quick Start</h2>
-      <div class="code-block">
-        <div class="code-header">
-          <span>Terminal</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <div class="section-header">
+        <div class="section-label">// quick start</div>
+        <h2>Up and running in 60 seconds</h2>
+      </div>
+      
+      <div class="install-methods">
+        <div class="install-method">
+          <div class="install-method-header">
+            <span class="install-method-name">npx / bunx</span>
+            <span class="install-method-badge">zero install</span>
+          </div>
+          <div class="code-block">
+            <pre><code><span class="comment"># try without installing</span>
+npx @kaban-board/cli init --name "My Project"
+npx @kaban-board/cli tui
+
+<span class="comment"># or with bun</span>
+bunx @kaban-board/cli tui</code></pre>
+          </div>
         </div>
-        <pre><code><span class="comment"># Install</span>
-git clone https://github.com/beshkenadze/kaban
-cd kaban && bun install && bun run build
 
-<span class="comment"># Initialize a board in your project</span>
+        <div class="install-method">
+          <div class="install-method-header">
+            <span class="install-method-name">npm</span>
+            <span class="install-method-badge">global install</span>
+          </div>
+          <div class="code-block">
+            <pre><code>npm install -g @kaban-board/cli
 kaban init --name "My Project"
-
-<span class="comment"># Add a task</span>
-kaban add "Implement feature X" --agent claude
-
-<span class="comment"># Launch the TUI</span>
 kaban tui</code></pre>
+          </div>
+        </div>
+
+        <div class="install-method">
+          <div class="install-method-header">
+            <span class="install-method-name">homebrew</span>
+            <span class="install-method-badge">macos / linux</span>
+          </div>
+          <div class="code-block">
+            <pre><code>brew tap beshkenadze/tap
+brew install kaban
+kaban tui</code></pre>
+          </div>
+        </div>
+
+        <div class="install-method">
+          <div class="install-method-header">
+            <span class="install-method-name">from source</span>
+            <span class="install-method-badge">development</span>
+          </div>
+          <div class="code-block">
+            <pre><code>git clone https://github.com/beshkenadze/kaban
+cd kaban && bun install && bun run build
+task install</code></pre>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="mcp-section">
-      <h2>For AI Agents</h2>
-      <p>Connect your AI coding assistant to Kaban via MCP (Model Context Protocol).</p>
+    <section id="mcp" class="mcp-section">
+      <div class="section-header">
+        <div class="section-label">// mcp integration</div>
+        <h2>For AI Agents</h2>
+        <p class="desc">Connect your AI coding assistant to Kaban via Model Context Protocol.</p>
+      </div>
       
       <div class="code-block">
         <div class="code-header">
           <span>claude_desktop_config.json</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
         </div>
         <pre><code>{
   "mcpServers": {
@@ -119,89 +201,165 @@ kaban tui</code></pre>
       <div class="mcp-tools">
         <h3>Available MCP Tools</h3>
         <div class="tool-grid">
-          <div class="tool"><code>kaban_add_task</code> Add new tasks</div>
-          <div class="tool"><code>kaban_list_tasks</code> Query tasks with filters</div>
-          <div class="tool"><code>kaban_move_task</code> Move between columns</div>
-          <div class="tool"><code>kaban_complete_task</code> Mark as done</div>
-          <div class="tool"><code>kaban_update_task</code> Edit task details</div>
-          <div class="tool"><code>kaban_status</code> Board overview</div>
+          <div class="tool"><code>kaban_add_task</code> <span>Add new tasks</span></div>
+          <div class="tool"><code>kaban_list_tasks</code> <span>Query with filters</span></div>
+          <div class="tool"><code>kaban_move_task</code> <span>Move between columns</span></div>
+          <div class="tool"><code>kaban_complete_task</code> <span>Mark as done</span></div>
+          <div class="tool"><code>kaban_update_task</code> <span>Edit task details</span></div>
+          <div class="tool"><code>kaban_status</code> <span>Board overview</span></div>
         </div>
       </div>
     </section>
 
-    <section class="cli-section">
-      <h2>CLI Commands</h2>
+    <section id="cli" class="cli-section">
+      <div class="section-header">
+        <div class="section-label">// cli reference</div>
+        <h2>CLI Commands</h2>
+      </div>
       <div class="command-grid">
         <div class="command">
           <code>kaban init</code>
-          <span>Initialize a new board</span>
+          <span>Initialize board</span>
         </div>
         <div class="command">
           <code>kaban add &lt;title&gt;</code>
-          <span>Add a task</span>
+          <span>Add task</span>
         </div>
         <div class="command">
           <code>kaban list</code>
-          <span>List tasks with filters</span>
+          <span>List tasks</span>
         </div>
         <div class="command">
           <code>kaban move &lt;id&gt;</code>
-          <span>Move task to column</span>
+          <span>Move task</span>
         </div>
         <div class="command">
           <code>kaban done &lt;id&gt;</code>
-          <span>Mark task complete</span>
+          <span>Complete task</span>
         </div>
         <div class="command">
           <code>kaban tui</code>
-          <span>Launch interactive UI</span>
+          <span>Launch UI</span>
         </div>
         <div class="command">
           <code>kaban status</code>
-          <span>Show board summary</span>
+          <span>Board summary</span>
         </div>
         <div class="command">
           <code>kaban mcp</code>
-          <span>Start MCP server</span>
+          <span>MCP server</span>
         </div>
       </div>
     </section>
 
-    <section class="install-section">
-      <h2>Installation</h2>
+    <section id="install" class="install-section">
+      <div class="section-header">
+        <div class="section-label">// installation</div>
+        <h2>Get Kaban</h2>
+      </div>
       
       <h3>Prerequisites</h3>
       <ul>
         <li><a href="https://bun.sh">Bun</a> runtime (v1.0+)</li>
-        <li><a href="https://taskfile.dev">Task</a> (optional, for easy install)</li>
+        <li><a href="https://taskfile.dev">Task</a> (optional)</li>
       </ul>
 
-      <h3>With Task (Recommended)</h3>
+      <h3>With Task</h3>
       <div class="code-block">
         <pre><code>git clone https://github.com/beshkenadze/kaban
 cd kaban
 task install</code></pre>
       </div>
 
-      <h3>Manual Installation</h3>
+      <h3>Manual</h3>
       <div class="code-block">
         <pre><code>git clone https://github.com/beshkenadze/kaban
 cd kaban
-bun install
-bun run build
-# Add to PATH or create alias
-alias kaban="bun run /path/to/kaban/packages/cli/src/index.ts"</code></pre>
+bun install && bun run build
+alias kaban="bun run $(pwd)/packages/cli/src/index.ts"</code></pre>
+      </div>
+
+      <h3>AI Code Editors</h3>
+      <p class="install-desc">Install Kaban as a skill/plugin or add the MCP server directly:</p>
+      
+      <div class="ai-tools-grid">
+        <div class="ai-tool">
+          <div class="ai-tool-header">
+            <span class="ai-tool-name">Claude Code</span>
+            <span class="ai-tool-badge">plugin + mcp</span>
+          </div>
+          <div class="code-block">
+            <pre><code><span class="comment"># Install plugin</span>
+/plugin install kaban@github.com/beshkenadze/kaban/marketplace/kaban-workflow
+
+<span class="comment"># Or add MCP to .mcp.json</span>
+{
+  "kaban": {
+    "command": "kaban",
+    "args": ["mcp"]
+  }
+}</code></pre>
+          </div>
+        </div>
+        
+        <div class="ai-tool">
+          <div class="ai-tool-header">
+            <span class="ai-tool-name">OpenCode</span>
+            <span class="ai-tool-badge">plugin + mcp</span>
+          </div>
+          <div class="code-block">
+            <pre><code><span class="comment"># Add plugin to opencode.jsonc</span>
+{
+  "plugin": ["kaban-workflow"]
+}
+
+<span class="comment"># Or add MCP server</span>
+opencode mcp add</code></pre>
+          </div>
+        </div>
+        
+        <div class="ai-tool">
+          <div class="ai-tool-header">
+            <span class="ai-tool-name">Codex CLI</span>
+            <span class="ai-tool-badge">skill + mcp</span>
+          </div>
+          <div class="code-block">
+            <pre><code><span class="comment"># Install skill from GitHub</span>
+codex skill install --url \
+  github.com/beshkenadze/kaban/marketplace/kaban-workflow
+
+<span class="comment"># Or add MCP server</span>
+codex mcp add kaban -- kaban mcp</code></pre>
+          </div>
+        </div>
+        
+        <div class="ai-tool">
+          <div class="ai-tool-header">
+            <span class="ai-tool-name">Gemini CLI</span>
+            <span class="ai-tool-badge">extension + mcp</span>
+          </div>
+          <div class="code-block">
+            <pre><code><span class="comment"># Install extension</span>
+gemini extensions install \
+  https://github.com/beshkenadze/kaban
+
+<span class="comment"># Or add MCP to settings.json</span>
+{ "mcpServers": { "kaban": {
+  "command": "kaban", "args": ["mcp"]
+}}}</code></pre>
+          </div>
+        </div>
       </div>
     </section>
 
     <footer>
       <div class="footer-content">
         <div class="footer-links">
-          <a href="https://github.com/beshkenadze/kaban">GitHub</a>
-          <a href="https://github.com/beshkenadze/kaban/issues">Issues</a>
-          <a href="https://github.com/beshkenadze/kaban/blob/main/LICENSE">MIT License</a>
+          <a href="https://github.com/beshkenadze/kaban">github</a>
+          <a href="https://github.com/beshkenadze/kaban/issues">issues</a>
+          <a href="https://github.com/beshkenadze/kaban/blob/main/LICENSE">mit license</a>
         </div>
-        <p class="footer-note">Built for AI agents, by humans (and AI).</p>
+        <p class="footer-note">built for ai agents, by humans (and ai)</p>
       </div>
     </footer>
   </div>
@@ -210,8 +368,8 @@ alias kaban="bun run /path/to/kaban/packages/cli/src/index.ts"</code></pre>
     function copyCode(btn) {
       const code = btn.parentElement.nextElementSibling.textContent;
       navigator.clipboard.writeText(code).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
+        btn.textContent = 'copied!';
+        setTimeout(() => btn.textContent = 'copy', 2000);
       });
     }
   </script>

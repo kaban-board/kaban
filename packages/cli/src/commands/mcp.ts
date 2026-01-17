@@ -7,7 +7,7 @@ import {
   DEFAULT_CONFIG,
   initializeSchema,
   TaskService,
-} from "@kaban/core";
+} from "@kaban-board/core";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {

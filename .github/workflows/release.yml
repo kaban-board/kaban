@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Run tests
+        run: cd packages/core && bun test
+
+      - name: Publish to npm
+        run: |
+          cd packages/core && npm publish --access public
+          cd ../cli && npm publish --access public
+          cd ../tui && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for npm registry
+        run: sleep 30
+
+      - name: Get package info
+        id: pkg
+        run: |
+          SHA=$(curl -sL "https://registry.npmjs.org/@kaban-board/cli/-/cli-${{ needs.release.outputs.version }}.tgz" | shasum -a 256 | cut -d' ' -f1)
+          echo "sha256=$SHA" >> $GITHUB_OUTPUT
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: beshkenadze/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update formula
+        run: |
+          cat > Formula/kaban.rb << 'EOF'
+          class Kaban < Formula
+            desc "Terminal Kanban for AI Code Agents"
+            homepage "https://beshkenadze.github.io/kaban"
+            url "https://registry.npmjs.org/@kaban-board/cli/-/cli-${{ needs.release.outputs.version }}.tgz"
+            sha256 "${{ steps.pkg.outputs.sha256 }}"
+            license "MIT"
+
+            depends_on "node"
+
+            def install
+              system "npm", "install", *std_npm_args
+              bin.install_symlink Dir["#{libexec}/bin/*"]
+            end
+
+            test do
+              assert_match "Terminal Kanban", shell_output("#{bin}/kaban --help")
+            end
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kaban.rb
+          git commit -m "kaban ${{ needs.release.outputs.version }}"
+          git push

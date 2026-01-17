@@ -1,4 +1,4 @@
-import { KabanError } from "@kaban/core";
+import { KabanError } from "@kaban-board/core";
 import { Command } from "commander";
 import { getContext } from "../lib/context.js";
 import { outputError, outputSuccess } from "../lib/json-output.js";
@@ -6,7 +6,7 @@ import { outputError, outputSuccess } from "../lib/json-output.js";
 type SortField = "name" | "date" | "updated";
 
 function sortTasks(
-  tasks: Awaited<ReturnType<typeof import("@kaban/core").TaskService.prototype.listTasks>>,
+  tasks: Awaited<ReturnType<typeof import("@kaban-board/core").TaskService.prototype.listTasks>>,
   sortBy: SortField,
   reverse: boolean,
 ) {

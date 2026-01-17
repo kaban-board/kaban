@@ -1,6 +1,7 @@
 {
-  "name": "@kaban/core",
+  "name": "@kaban-board/core",
   "version": "0.1.0",
+  "description": "Core database and services for Kaban - Terminal Kanban for AI Agents",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,10 +11,14 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly --declaration --outDir ./dist",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
@@ -22,8 +27,29 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@libsql/darwin-arm64": "^0.5.22",
     "@types/bun": "latest",
     "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beshkenadze/kaban.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://beshkenadze.github.io/kaban",
+  "bugs": {
+    "url": "https://github.com/beshkenadze/kaban/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "kanban",
+    "database",
+    "sqlite",
+    "drizzle"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

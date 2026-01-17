@@ -1,23 +1,55 @@
 {
-  "name": "@kaban/cli",
+  "name": "@kaban-board/cli",
   "version": "0.1.0",
+  "description": "Terminal Kanban for AI Code Agents - CLI and MCP server",
   "type": "module",
   "bin": {
-    "kaban": "./src/index.ts"
+    "kaban": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && chmod +x ./dist/index.js",
     "dev": "bun run ./src/index.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@kaban/core": "workspace:*",
+    "@kaban-board/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^12.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beshkenadze/kaban.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://beshkenadze.github.io/kaban",
+  "bugs": {
+    "url": "https://github.com/beshkenadze/kaban/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "kanban",
+    "ai",
+    "agents",
+    "mcp",
+    "claude",
+    "terminal",
+    "cli",
+    "tui",
+    "task-management"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

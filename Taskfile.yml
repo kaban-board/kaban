@@ -68,6 +68,11 @@ tasks:
     cmds:
       - bun run dev
 
+  dev:docs:
+    desc: Serve landing page locally
+    cmds:
+      - bun run docs/serve.ts
+
   test:
     desc: Run all tests
     cmds:

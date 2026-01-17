@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BoardService, type Config, createDb, type DB, TaskService } from "@kaban/core";
+import { BoardService, type Config, createDb, type DB, TaskService } from "@kaban-board/core";
 
 export interface KabanContext {
   db: DB;

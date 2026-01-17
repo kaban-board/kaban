@@ -1,23 +1,50 @@
 {
-  "name": "@kaban/tui",
+  "name": "@kaban-board/tui",
   "version": "0.1.0",
+  "description": "Terminal User Interface for Kaban - Kanban for AI Agents",
   "type": "module",
   "bin": {
     "kaban-tui": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && chmod +x ./dist/index.js",
     "build:bin": "bun build --compile --minify ./src/index.ts --outfile ./dist/kaban-tui",
     "dev": "bun run ./src/index.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@kaban/core": "workspace:*",
+    "@kaban-board/core": "workspace:*",
     "@opentui/core": "^0.1.69"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beshkenadze/kaban.git",
+    "directory": "packages/tui"
+  },
+  "homepage": "https://beshkenadze.github.io/kaban",
+  "bugs": {
+    "url": "https://github.com/beshkenadze/kaban/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "kanban",
+    "tui",
+    "terminal",
+    "ui"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

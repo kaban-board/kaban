@@ -1,4 +1,4 @@
-import { KabanError } from "@kaban/core";
+import { KabanError } from "@kaban-board/core";
 import { Command } from "commander";
 import { getAgent, getContext } from "../lib/context.js";
 import { outputError, outputSuccess } from "../lib/json-output.js";

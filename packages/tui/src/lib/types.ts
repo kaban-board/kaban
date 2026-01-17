@@ -1,4 +1,4 @@
-import type { BoardService, Task, TaskService } from "@kaban/core";
+import type { BoardService, Task, TaskService } from "@kaban-board/core";
 import type {
   BoxRenderable,
   CliRenderer,

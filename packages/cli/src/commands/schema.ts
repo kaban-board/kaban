@@ -1,4 +1,4 @@
-import { jsonSchemas } from "@kaban/core";
+import { jsonSchemas } from "@kaban-board/core";
 import { Command } from "commander";
 
 const availableSchemas = Object.keys(jsonSchemas);
