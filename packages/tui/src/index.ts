@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { BoardService, createDb, TaskService } from "@kaban-board/core";
 import { createCliRenderer } from "@opentui/core";
 import { refreshBoard } from "./components/board.js";
