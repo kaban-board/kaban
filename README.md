@@ -205,9 +205,9 @@ kaban move abc123 --next
 kaban done abc123
 ```
 
-## Claude Code Hook Integration
+## Claude Code Hook Integration (Optional)
 
-Automatically sync Claude Code's TodoWrite tool with your Kaban board. When Claude creates or updates todos, they're mirrored to Kaban in real-time.
+> **Optional but recommended** — This hook automatically syncs Claude Code's TodoWrite tool with your Kaban board. When Claude creates or updates todos, they're mirrored to Kaban in real-time. You can still use Kaban without this hook via CLI, TUI, or MCP.
 
 ### Installation
 
