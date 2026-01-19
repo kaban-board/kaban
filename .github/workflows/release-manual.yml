@@ -1,0 +1,108 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.3.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write  # Required for npm OIDC trusted publishing
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js (for npm OIDC)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Bump versions
+        run: |
+          # Update all package.json versions
+          for pkg in package.json packages/*/package.json; do
+            jq --arg v "${{ inputs.version }}" '.version = $v' "$pkg" > tmp.json && mv tmp.json "$pkg"
+          done
+          
+          # Update manifest
+          echo '{ ".": "${{ inputs.version }}" }' > .release-please-manifest.json
+
+      - name: Build
+        run: bun run build
+
+      - name: Run tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          cd packages/core && bun test
+          cd ../cli && bun test
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: release v${{ inputs.version }}"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin main --tags
+
+      - name: Publish to npm
+        run: |
+          cd packages/core && bun pm pack --destination /tmp/
+          cd ../cli && bun pm pack --destination /tmp/
+          cd ../tui && bun pm pack --destination /tmp/
+          
+          npm publish /tmp/kaban-board-core-*.tgz --provenance --access public
+          npm publish /tmp/kaban-board-cli-*.tgz --provenance --access public
+          npm publish /tmp/kaban-board-tui-*.tgz --provenance --access public
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for npm propagation
+        run: sleep 60
+
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: kaban
+          formula-path: Formula/kaban.rb
+          homebrew-tap: beshkenadze/homebrew-tap
+          tag-name: v${{ inputs.version }}
+          download-url: https://registry.npmjs.org/@kaban-board/cli/-/cli-${{ inputs.version }}.tgz
+          commit-message: |
+            kaban ${{ inputs.version }}
+            
+            Automated update from https://github.com/beshkenadze/kaban
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

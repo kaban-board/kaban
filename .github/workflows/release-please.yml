@@ -1,34 +1,48 @@
-name: Release
+name: Release Please
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
-  id-token: write  # Required for npm OIDC trusted publishing
+  pull-requests: write
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get version
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Setup Node.js (for npm publish with OIDC)
+      - name: Setup Node.js (for npm OIDC)
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -38,30 +52,26 @@ jobs:
         run: bun run build
 
       - name: Run tests
-        run: cd packages/core && bun test
-
-      - name: Pack and publish to npm (OIDC)
         run: |
-          # Pack with bun (resolves workspace:* to actual versions)
+          cd packages/core && bun test
+          cd ../cli && bun test
+
+      - name: Publish to npm
+        run: |
           cd packages/core && bun pm pack --destination /tmp/
           cd ../cli && bun pm pack --destination /tmp/
           cd ../tui && bun pm pack --destination /tmp/
           
-          # Publish tarballs with npm (OIDC provenance)
           npm publish /tmp/kaban-board-core-*.tgz --provenance --access public
           npm publish /tmp/kaban-board-cli-*.tgz --provenance --access public
           npm publish /tmp/kaban-board-tui-*.tgz --provenance --access public
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-
   homebrew:
-    needs: release
+    needs: [release-please, publish]
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for npm registry propagation
+      - name: Wait for npm propagation
         run: sleep 60
 
       - name: Update Homebrew formula
@@ -70,11 +80,11 @@ jobs:
           formula-name: kaban
           formula-path: Formula/kaban.rb
           homebrew-tap: beshkenadze/homebrew-tap
-          tag-name: v${{ needs.release.outputs.version }}
-          download-url: https://registry.npmjs.org/@kaban-board/cli/-/cli-${{ needs.release.outputs.version }}.tgz
+          tag-name: ${{ needs.release-please.outputs.tag_name }}
+          download-url: https://registry.npmjs.org/@kaban-board/cli/-/cli-${{ needs.release-please.outputs.version }}.tgz
           commit-message: |
-            kaban ${{ needs.release.outputs.version }}
-
+            kaban ${{ needs.release-please.outputs.version }}
+            
             Automated update from https://github.com/beshkenadze/kaban
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
