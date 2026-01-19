@@ -51,6 +51,13 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Setup kaban in PATH
+        run: |
+          mkdir -p $HOME/.local/bin
+          printf '#!/bin/bash\nexec bun "${{ github.workspace }}/packages/cli/dist/index.js" "$@"\n' > $HOME/.local/bin/kaban
+          chmod +x $HOME/.local/bin/kaban
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Run tests
         run: |
           cd packages/core && bun test
