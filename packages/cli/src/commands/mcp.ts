@@ -18,6 +18,31 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 
+export type McpResponse = { content: { type: string; text: string }[]; isError?: boolean };
+
+export const mcpHelpers = {
+  getParam(
+    args: Record<string, unknown> | undefined,
+    primary: string,
+    alias: string,
+  ): string | undefined {
+    if (!args) return undefined;
+    const primaryVal = args[primary];
+    if (typeof primaryVal === "string" && primaryVal.trim()) return primaryVal;
+    const aliasVal = args[alias];
+    if (typeof aliasVal === "string" && aliasVal.trim()) return aliasVal;
+    return undefined;
+  },
+
+  errorResponse(message: string): McpResponse {
+    return { content: [{ type: "text", text: JSON.stringify({ error: message }) }], isError: true };
+  },
+
+  jsonResponse(data: unknown): McpResponse {
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+};
+
 function getKabanPaths(basePath?: string) {
   const base = basePath ?? process.cwd();
   const kabanDir = join(base, ".kaban");
@@ -181,26 +206,7 @@ async function startMcpServer(workingDirectory: string) {
     ],
   }));
 
-  // Helper to extract a parameter that may have an alias (e.g., 'id' or 'taskId')
-  function getParam(
-    args: Record<string, unknown> | undefined,
-    primary: string,
-    alias: string,
-  ): string | undefined {
-    if (!args) return undefined;
-    return (args[primary] as string) ?? (args[alias] as string);
-  }
-
-  function errorResponse(message: string): {
-    content: { type: string; text: string }[];
-    isError: boolean;
-  } {
-    return { content: [{ type: "text", text: JSON.stringify({ error: message }) }], isError: true };
-  }
-
-  function jsonResponse(data: unknown): { content: { type: string; text: string }[] } {
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-  }
+  const { getParam, errorResponse, jsonResponse } = mcpHelpers;
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -245,13 +251,18 @@ async function startMcpServer(workingDirectory: string) {
 
       switch (name) {
         case "kaban_add_task": {
+          const addArgs = args as Record<string, unknown> | undefined;
+          const title = addArgs?.title;
+          if (typeof title !== "string" || !title.trim()) {
+            return errorResponse("Title required (non-empty string)");
+          }
           const task = await taskService.addTask(args as Parameters<typeof taskService.addTask>[0]);
           return jsonResponse(task);
         }
         case "kaban_get_task": {
           if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
           const task = await taskService.getTask(taskId);
-          if (!task) return jsonResponse({ error: "Task not found" });
+          if (!task) return errorResponse("Task not found");
           return jsonResponse(task);
         }
         case "kaban_list_tasks": {
@@ -294,9 +305,9 @@ async function startMcpServer(workingDirectory: string) {
           if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
           const tasks = await taskService.listTasks();
           const task = tasks.find((t) => t.id.startsWith(taskId));
-          if (!task) return jsonResponse({ error: `Task '${taskId}' not found` });
+          if (!task) return errorResponse(`Task '${taskId}' not found`);
           const terminal = await boardService.getTerminalColumn();
-          if (!terminal) return jsonResponse({ error: "No terminal column configured" });
+          if (!terminal) return errorResponse("No terminal column configured");
           const completed = await taskService.moveTask(task.id, terminal.id);
           return jsonResponse(completed);
         }

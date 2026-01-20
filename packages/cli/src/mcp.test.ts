@@ -8,20 +8,13 @@ import {
   initializeSchema,
   TaskService,
 } from "@kaban-board/core";
+import { mcpHelpers } from "./commands/mcp.js";
 
 const TEST_DIR = "/tmp/kaban-mcp-test";
 const DB_PATH = `${TEST_DIR}/.kaban/board.db`;
 const CONFIG_PATH = `${TEST_DIR}/.kaban/config.json`;
 
-// Helper functions extracted from mcp.ts for testing
-function getParam(
-  args: Record<string, unknown> | undefined,
-  primary: string,
-  alias: string,
-): string | undefined {
-  if (!args) return undefined;
-  return (args[primary] as string) ?? (args[alias] as string);
-}
+const { getParam, errorResponse, jsonResponse } = mcpHelpers;
 
 describe("MCP Parameter Helpers", () => {
   test("getParam returns primary when both provided", () => {
@@ -47,6 +40,40 @@ describe("MCP Parameter Helpers", () => {
     expect(getParam({ column: "done" }, "columnId", "column")).toBe("done");
     expect(getParam({ columnId: "todo" }, "columnId", "column")).toBe("todo");
     expect(getParam({ columnId: "todo", column: "done" }, "columnId", "column")).toBe("todo");
+  });
+
+  test("getParam rejects non-string values (type safety)", () => {
+    expect(getParam({ id: 123 }, "id", "taskId")).toBeUndefined();
+    expect(getParam({ id: null }, "id", "taskId")).toBeUndefined();
+    expect(getParam({ id: { nested: "obj" } }, "id", "taskId")).toBeUndefined();
+    expect(getParam({ id: ["array"] }, "id", "taskId")).toBeUndefined();
+  });
+
+  test("getParam prefers valid string alias when primary is non-string", () => {
+    expect(getParam({ id: 123, taskId: "valid-id" }, "id", "taskId")).toBe("valid-id");
+    expect(getParam({ id: null, taskId: "valid-id" }, "id", "taskId")).toBe("valid-id");
+  });
+
+  test("getParam rejects empty/whitespace strings", () => {
+    expect(getParam({ id: "" }, "id", "taskId")).toBeUndefined();
+    expect(getParam({ id: "   " }, "id", "taskId")).toBeUndefined();
+    expect(getParam({ id: "", taskId: "valid" }, "id", "taskId")).toBe("valid");
+  });
+});
+
+describe("MCP Response Helpers", () => {
+  test("errorResponse sets isError true", () => {
+    const response = errorResponse("Something went wrong");
+    expect(response.isError).toBe(true);
+    expect(response.content[0].type).toBe("text");
+    expect(JSON.parse(response.content[0].text)).toEqual({ error: "Something went wrong" });
+  });
+
+  test("jsonResponse does not set isError", () => {
+    const response = jsonResponse({ success: true, data: "test" });
+    expect(response.isError).toBeUndefined();
+    expect(response.content[0].type).toBe("text");
+    expect(JSON.parse(response.content[0].text)).toEqual({ success: true, data: "test" });
   });
 });
 
