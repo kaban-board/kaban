@@ -1,5 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { BoardService, type Config, createDb, DEFAULT_CONFIG, initializeSchema } from "@kaban-board/core";
+import {
+  BoardService,
+  type Config,
+  createDb,
+  DEFAULT_CONFIG,
+  initializeSchema,
+} from "@kaban-board/core";
 import { Command } from "commander";
 import { getKabanPaths } from "../lib/context.js";
 
@@ -22,7 +28,7 @@ export const initCommand = new Command("init")
     };
     writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-    const db = createDb(dbPath);
+    const db = await createDb(dbPath);
     await initializeSchema(db);
     const boardService = new BoardService(db);
     await boardService.initializeBoard(config);

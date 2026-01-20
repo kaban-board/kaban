@@ -10,9 +10,17 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@kaban-board/cli"><img src="https://img.shields.io/npm/v/@kaban-board/cli?label=npm&color=cb3837" alt="npm version"></a>
+  <a href="https://github.com/beshkenadze/homebrew-tap"><img src="https://img.shields.io/badge/homebrew-tap-fbb040" alt="Homebrew"></a>
+  <a href="https://github.com/beshkenadze/kaban/blob/main/LICENSE"><img src="https://img.shields.io/github/license/beshkenadze/kaban" alt="License"></a>
+  <a href="https://github.com/beshkenadze/kaban"><img src="https://img.shields.io/github/stars/beshkenadze/kaban?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center">
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#mcp-integration">MCP Integration</a> •
+  <a href="#claude-code-hook-integration">Hook</a> •
   <a href="#cli-usage">CLI</a> •
   <a href="#tui-usage">TUI</a> •
   <a href="#ai-code-editors">AI Editors</a>
@@ -36,6 +44,7 @@ Kaban is a terminal-based Kanban board designed for **AI code agents** and devel
 | Feature | Description |
 |---------|-------------|
 | **MCP Server** | AI agents can read, create, and manage tasks autonomously |
+| **TodoWrite Hook** | Auto-sync Claude Code todos to Kaban board |
 | **Interactive TUI** | Vim-style navigation, keyboard-driven workflow |
 | **Powerful CLI** | Scriptable commands for automation |
 | **WIP Limits** | Built-in Kanban best practices |
@@ -173,6 +182,9 @@ kaban <command> [options]
 | `kaban status` | Show board summary |
 | `kaban tui` | Launch interactive UI |
 | `kaban mcp` | Start MCP server |
+| `kaban hook install` | Install TodoWrite sync hook |
+| `kaban hook status` | Check hook status |
+| `kaban sync` | Sync TodoWrite input (stdin) |
 
 ### Examples
 
@@ -191,6 +203,48 @@ kaban move abc123 --next
 
 # Mark complete
 kaban done abc123
+```
+
+## Claude Code Hook Integration
+
+> **Optional but recommended** — Automatically sync Claude Code's TodoWrite with your Kaban board. You can still use Kaban without this hook via CLI, TUI, or MCP.
+
+### Installation
+
+```bash
+kaban hook install
+```
+
+This will:
+1. Install the hook binary to `~/.claude/hooks/`
+2. Configure Claude Code's `settings.json` with a PostToolUse hook
+3. Create a backup of your settings
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `kaban hook install` | Install the TodoWrite sync hook |
+| `kaban hook uninstall` | Remove the hook |
+| `kaban hook status` | Check installation status and activity |
+
+### How It Works
+
+```
+Claude Code → TodoWrite → Hook → kaban sync → Kaban Board
+```
+
+- **pending** todos → **Todo** column
+- **in_progress** todos → **In Progress** column  
+- **completed** todos → **Done** column
+- **cancelled** todos → **Backlog** column
+
+### Logs
+
+Sync activity is logged to `~/.claude/hooks/sync.log`. View recent activity:
+
+```bash
+kaban hook status
 ```
 
 ## TUI Usage
@@ -220,7 +274,29 @@ kaban tui
 
 Add Kaban MCP server to your AI coding assistant:
 
-### Claude Code / Claude Desktop
+### Claude Code Skill (Recommended)
+
+Install the Kaban workflow skill for TodoWrite sync and session persistence:
+
+```bash
+npx add-skill beshkenadze/kaban
+# or
+bunx add-skill beshkenadze/kaban
+```
+
+The skill includes:
+- **MCP server** — Auto-configured, no manual setup needed
+- **Kaban workflow skill** — Syncs with TodoWrite, resumes tasks across sessions
+- **Session hooks** — Auto-checks for in-progress tasks on session start
+
+#### Alternative: Plugin Marketplace
+
+```bash
+/plugin marketplace add beshkenadze/kaban
+/plugin install kaban-workflow@beshkenadze-kaban
+```
+
+### Claude Code / Claude Desktop (Manual MCP)
 
 Add to `.mcp.json` (Claude Code) or `claude_desktop_config.json`:
 
@@ -320,6 +396,18 @@ bun run build
 bun run lint
 bun run test
 ```
+
+### Commit Convention
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) for automated releases:
+
+```bash
+feat: add new feature      # → Minor version bump
+fix: resolve bug           # → Patch version bump  
+feat!: breaking change     # → Major version bump
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full details on commit types and the release process.
 
 ## License
 

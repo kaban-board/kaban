@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-import { Command } from "commander";
 import { createRequire } from "node:module";
+import { Command } from "commander";
 import { addCommand } from "./commands/add.js";
 import { doneCommand } from "./commands/done.js";
+import { hookCommand } from "./commands/hook.js";
 import { initCommand } from "./commands/init.js";
 import { listCommand } from "./commands/list.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { moveCommand } from "./commands/move.js";
 import { schemaCommand } from "./commands/schema.js";
 import { statusCommand } from "./commands/status.js";
+import { syncCommand } from "./commands/sync.js";
 import { tuiCommand } from "./commands/tui.js";
 
 const require = createRequire(import.meta.url);
@@ -27,5 +29,7 @@ program.addCommand(statusCommand);
 program.addCommand(schemaCommand);
 program.addCommand(mcpCommand);
 program.addCommand(tuiCommand);
+program.addCommand(hookCommand);
+program.addCommand(syncCommand);
 
 program.parse();

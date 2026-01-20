@@ -1,6 +1,6 @@
 {
   "name": "@kaban-board/tui",
-  "version": "0.1.2",
+  "version": "0.2.4",
   "description": "Terminal User Interface for Kaban - Kanban for AI Agents",
   "type": "module",
   "bin": {
@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && chmod +x ./dist/index.js",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --packages external && chmod +x ./dist/index.js",
     "build:bin": "bun build --compile --minify ./src/index.ts --outfile ./dist/kaban-tui",
     "dev": "bun run ./src/index.ts",
     "test": "bun test",
@@ -26,7 +26,7 @@
     "typescript": "^5.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "bun": ">=1.0.0"
   },
   "repository": {
     "type": "git",

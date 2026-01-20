@@ -1,6 +1,6 @@
 {
   "name": "@kaban-board/cli",
-  "version": "0.1.2",
+  "version": "0.2.4",
   "description": "Terminal Kanban for AI Code Agents - CLI and MCP server",
   "type": "module",
   "bin": {
@@ -10,17 +10,20 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && chmod +x ./dist/index.js",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external && bun build ./src/hook-entry.ts --outfile ./dist/kaban-hook --target node && chmod +x ./dist/index.js ./dist/kaban-hook",
     "dev": "bun run ./src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@clack/prompts": "^0.11.0",
     "@kaban-board/core": "workspace:*",
     "@kaban-board/tui": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.25.2",
-    "commander": "^12.0.0"
+    "chalk": "^5.6.2",
+    "commander": "^12.0.0",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/bun": "latest",

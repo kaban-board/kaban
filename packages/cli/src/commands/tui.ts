@@ -17,6 +17,11 @@ function hasBun(): boolean {
   }
 }
 
+function findInPath(name: string): string | null {
+  const result = spawnSync("which", [name], { encoding: "utf-8" });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
 function resolveTuiPackage(): string | null {
   try {
     return require.resolve("@kaban-board/tui");
@@ -25,36 +30,51 @@ function resolveTuiPackage(): string | null {
   }
 }
 
+function runBinary(path: string, args: string[]): void {
+  const child = spawn(path, args, { stdio: "inherit", cwd: process.cwd() });
+  child.on("exit", (code) => process.exit(code ?? 0));
+}
+
 export const tuiCommand = new Command("tui")
   .description("Start interactive Terminal UI")
   .action(async () => {
     const cwd = process.cwd();
+    const args = process.argv.slice(3);
     const useBun = hasBun();
 
-    // 1. Development mode: Try monorepo TypeScript source
-    const tuiDevEntry = join(__dirname, "../../../tui/src/index.ts");
-    if (existsSync(tuiDevEntry)) {
-      if (useBun) {
-        const child = spawn("bun", ["run", tuiDevEntry], { stdio: "inherit", cwd });
-        child.on("exit", (code) => process.exit(code ?? 0));
-        return;
-      }
-      console.error("Development mode requires bun. Install: curl -fsSL https://bun.sh/install | bash");
-      process.exit(1);
-    }
+    // 1. Homebrew: Check sibling binary (e.g., /opt/homebrew/bin/kaban-tui)
+    const siblingBinary = join(dirname(process.execPath), "kaban-tui");
+    if (existsSync(siblingBinary)) return runBinary(siblingBinary, args);
 
-    // 2. Production: Use the bundled @kaban-board/tui dependency
-    const tuiEntry = resolveTuiPackage();
-    if (tuiEntry) {
-      const runtime = useBun ? "bun" : "node";
-      const child = spawn(runtime, [tuiEntry], { stdio: "inherit", cwd });
+    // 2. Global install: Check PATH for kaban-tui
+    const pathBinary = findInPath("kaban-tui");
+    if (pathBinary) return runBinary(pathBinary, args);
+
+    // 3. Development mode: Try monorepo TypeScript source
+    const tuiDevEntry = join(__dirname, "../../../tui/src/index.ts");
+    if (existsSync(tuiDevEntry) && useBun) {
+      const child = spawn("bun", ["run", tuiDevEntry], { stdio: "inherit", cwd });
       child.on("exit", (code) => process.exit(code ?? 0));
       return;
     }
 
-    // 3. Fallback: npx (should rarely happen now that tui is a dependency)
-    console.error("Fetching TUI via npx...");
+    // 4. Production npm: Use the bundled @kaban-board/tui dependency
+    const tuiEntry = resolveTuiPackage();
+    if (tuiEntry) {
+      const runtime = useBun ? "bun" : "node";
+      const child = spawn(runtime, [tuiEntry, ...args], { stdio: "inherit", cwd });
+      child.on("exit", (code) => process.exit(code ?? 0));
+      return;
+    }
+
+    // 5. Fallback: bunx or npx
+    if (useBun) {
+      const child = spawn("bun", ["x", "@kaban-board/tui", ...args], { stdio: "inherit", cwd });
+      child.on("exit", (code) => process.exit(code ?? 0));
+      return;
+    }
+
     const npxCmd = process.platform === "win32" ? "npx.cmd" : "npx";
-    const child = spawn(npxCmd, ["--yes", "@kaban-board/tui"], { stdio: "inherit", cwd });
+    const child = spawn(npxCmd, ["--yes", "@kaban-board/tui", ...args], { stdio: "inherit", cwd });
     child.on("exit", (code) => process.exit(code ?? 0));
   });

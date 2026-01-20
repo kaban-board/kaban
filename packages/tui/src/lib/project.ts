@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { BoardService, type Config, createDb, DEFAULT_CONFIG, initializeSchema } from "@kaban-board/core";
+import {
+  BoardService,
+  type Config,
+  createDb,
+  DEFAULT_CONFIG,
+  initializeSchema,
+} from "@kaban-board/core";
 
 export function findKabanRoot(startDir: string): string | null {
   let dir = startDir;
@@ -25,7 +31,7 @@ export function getKabanPaths(root: string) {
 export async function initializeProject(
   root: string,
   boardName: string,
-): Promise<{ db: ReturnType<typeof createDb>; boardService: BoardService }> {
+): Promise<{ db: Awaited<ReturnType<typeof createDb>>; boardService: BoardService }> {
   const { kabanDir, dbPath, configPath } = getKabanPaths(root);
   mkdirSync(kabanDir, { recursive: true });
 
@@ -35,7 +41,7 @@ export async function initializeProject(
   };
   writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-  const db = createDb(dbPath);
+  const db = await createDb(dbPath);
   await initializeSchema(db);
   const boardService = new BoardService(db);
   await boardService.initializeBoard(config);
