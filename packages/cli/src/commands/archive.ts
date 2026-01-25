@@ -15,7 +15,8 @@ export const archiveCommand = new Command("archive")
     try {
       const { taskService, boardService } = await getContext();
 
-      if (!options.column && !options.olderThan && !options.allColumns) {
+      // Default to terminal column unless --column or --all-columns is specified
+      if (!options.column && !options.allColumns) {
         const terminal = await boardService.getTerminalColumn();
         if (!terminal) {
           if (json) outputError(1, "No terminal column configured and no criteria specified");
