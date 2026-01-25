@@ -55,4 +55,12 @@ export class BoardService {
     const rows = await this.db.select().from(columns).where(eq(columns.isTerminal, true));
     return rows[0] ?? null;
   }
+
+  async getTerminalColumns(): Promise<Column[]> {
+    return this.db
+      .select()
+      .from(columns)
+      .where(eq(columns.isTerminal, true))
+      .orderBy(columns.position);
+  }
 }

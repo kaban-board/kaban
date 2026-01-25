@@ -62,4 +62,15 @@ describe("BoardService", () => {
     expect(terminal).not.toBeNull();
     expect(terminal?.id).toBe("done");
   });
+
+  describe("getTerminalColumns", () => {
+    test("returns all terminal columns", async () => {
+      await service.initializeBoard(DEFAULT_CONFIG);
+
+      const columns = await service.getTerminalColumns();
+
+      expect(columns.length).toBeGreaterThan(0);
+      expect(columns.every((c) => c.isTerminal)).toBe(true);
+    });
+  });
 });
