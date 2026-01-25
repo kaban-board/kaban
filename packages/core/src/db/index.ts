@@ -5,6 +5,7 @@ import { ExitCode, KabanError } from "../types.js";
 import * as schema from "./schema.js";
 
 export * from "./schema.js";
+export { runMigrations } from "./migrator.js";
 
 type DrizzleDb = ReturnType<typeof import("drizzle-orm/libsql").drizzle>;
 
@@ -28,6 +29,11 @@ export type DB = DrizzleDb & {
 export interface DbConfig {
   url: string;
   authToken?: string;
+}
+
+export interface CreateDbOptions {
+  /** Run migrations on connect. Default: true */
+  migrate?: boolean;
 }
 
 const isBun = typeof globalThis.Bun !== "undefined" && typeof globalThis.Bun.version === "string";
@@ -156,19 +162,29 @@ async function createLibsqlDb(config: DbConfig): Promise<DB> {
   }
 }
 
-export async function createDb(config: DbConfig | string): Promise<DB> {
+export async function createDb(
+  config: DbConfig | string,
+  options: CreateDbOptions = {},
+): Promise<DB> {
+  const { migrate = true } = options;
+
   try {
+    let db: DB;
+
     if (typeof config === "string") {
-      if (isBun) {
-        return await createBunDb(config);
-      }
-      return await createLibsqlDb({ url: `file:${config}` });
+      db = isBun ? await createBunDb(config) : await createLibsqlDb({ url: `file:${config}` });
+    } else if (isBun && config.url.startsWith("file:")) {
+      db = await createBunDb(fileUrlToPath(config.url));
+    } else {
+      db = await createLibsqlDb(config);
     }
 
-    if (isBun && config.url.startsWith("file:")) {
-      return await createBunDb(fileUrlToPath(config.url));
+    if (migrate) {
+      const { runMigrations } = await import("./migrator.js");
+      await runMigrations(db);
     }
-    return await createLibsqlDb(config);
+
+    return db;
   } catch (error) {
     if (error instanceof KabanError) throw error;
     throw new KabanError(
