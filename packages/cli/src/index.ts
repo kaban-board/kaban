@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { addCommand } from "./commands/add.js";
+import { archiveCommand, purgeCommand, resetCommand, restoreCommand } from "./commands/archive.js";
 import { doneCommand } from "./commands/done.js";
 import { hookCommand } from "./commands/hook.js";
 import { initCommand } from "./commands/init.js";
@@ -31,5 +32,9 @@ program.addCommand(mcpCommand);
 program.addCommand(tuiCommand);
 program.addCommand(hookCommand);
 program.addCommand(syncCommand);
+program.addCommand(archiveCommand);
+program.addCommand(restoreCommand);
+program.addCommand(purgeCommand);
+program.addCommand(resetCommand);
 
 program.parse();
