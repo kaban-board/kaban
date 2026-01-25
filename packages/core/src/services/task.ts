@@ -152,8 +152,9 @@ export class TaskService {
     if (filter?.columnId) {
       conditions.push(eq(tasks.columnId, filter.columnId));
     }
-    if (filter?.agent) {
-      conditions.push(eq(tasks.createdBy, filter.agent));
+    const creatorFilter = filter?.createdBy ?? filter?.agent;
+    if (creatorFilter) {
+      conditions.push(eq(tasks.createdBy, creatorFilter));
     }
     if (filter?.assignee) {
       conditions.push(eq(tasks.assignedTo, filter.assignee));

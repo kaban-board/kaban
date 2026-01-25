@@ -141,13 +141,33 @@ describe("TaskService", () => {
       expect(tasks[0].title).toBe("Todo");
     });
 
-    test("filters by agent", async () => {
+    test("filters by agent (deprecated)", async () => {
       await taskService.addTask({ title: "User task", agent: "user" });
       await taskService.addTask({ title: "Claude task", agent: "claude" });
 
       const tasks = await taskService.listTasks({ agent: "claude" });
       expect(tasks).toHaveLength(1);
       expect(tasks[0].title).toBe("Claude task");
+    });
+
+    test("filters by createdBy", async () => {
+      await taskService.addTask({ title: "User task", createdBy: "user" });
+      await taskService.addTask({ title: "Claude task", createdBy: "claude" });
+
+      const tasks = await taskService.listTasks({ createdBy: "claude" });
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].createdBy).toBe("claude");
+    });
+
+    test("createdBy takes priority over agent in filter", async () => {
+      await taskService.addTask({ title: "User task", createdBy: "user" });
+      await taskService.addTask({ title: "Claude task", createdBy: "claude" });
+
+      const tasks = await taskService.listTasks({ createdBy: "claude", agent: "user" });
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].createdBy).toBe("claude");
     });
 
     test("excludes archived tasks by default", async () => {

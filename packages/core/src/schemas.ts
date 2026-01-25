@@ -119,6 +119,8 @@ export const MoveTaskInputSchema = z.object({
 
 export const ListTasksFilterSchema = z.object({
   columnId: ColumnIdSchema.optional(),
+  createdBy: AgentNameSchema.optional(),
+  /** @deprecated Use createdBy instead */
   agent: AgentNameSchema.optional(),
   assignee: AgentNameSchema.optional(),
   blocked: z.boolean().optional(),
@@ -196,7 +198,10 @@ const UpdateTaskInputJsonSchema = z.object({
 
 const ListTasksFilterJsonSchema = z.object({
   columnId: ColumnIdSchema.optional(),
+  createdBy: AgentNameBaseSchema.optional(),
+  /** @deprecated Use createdBy instead */
   agent: AgentNameBaseSchema.optional(),
+  assignee: AgentNameBaseSchema.optional(),
   blocked: z.boolean().optional(),
   includeArchived: z.boolean().optional(),
 });
