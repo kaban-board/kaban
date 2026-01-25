@@ -49,9 +49,8 @@ export const archiveCommand = new Command("archive")
           includeArchived: false,
         });
 
-        const filtered = criteria.olderThan
-          ? tasks.filter((t) => t.createdAt < criteria.olderThan!)
-          : tasks;
+        const olderThan = criteria.olderThan;
+        const filtered = olderThan ? tasks.filter((t) => t.createdAt < olderThan) : tasks;
 
         if (json) {
           outputSuccess({ dryRun: true, wouldArchive: filtered.length, tasks: filtered });
@@ -109,7 +108,9 @@ export const restoreCommand = new Command("restore")
         return;
       }
 
-      console.log(`Restored [${restored.id.slice(0, 8)}] "${restored.title}" to ${restored.columnId}`);
+      console.log(
+        `Restored [${restored.id.slice(0, 8)}] "${restored.title}" to ${restored.columnId}`,
+      );
     } catch (error) {
       if (error instanceof KabanError) {
         if (json) outputError(error.code, error.message);

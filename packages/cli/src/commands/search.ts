@@ -1,4 +1,4 @@
-import { KabanError } from "@kaban-board/core";
+import { KabanError, type Task } from "@kaban-board/core";
 import { Command } from "commander";
 import { getContext } from "../lib/context.js";
 import { outputError, outputSuccess } from "../lib/json-output.js";
@@ -14,7 +14,7 @@ export const searchCommand = new Command("search")
     try {
       const { taskService } = await getContext();
 
-      let tasks;
+      let tasks: Task[];
       if (options.archive) {
         const result = await taskService.searchArchive(query, {
           limit: options.limit,
