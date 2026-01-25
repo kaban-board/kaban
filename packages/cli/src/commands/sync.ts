@@ -1,8 +1,8 @@
 import { Command } from "commander";
-import { getContext } from "../lib/context.js";
+import { DEFAULT_CONFIG, TodoWriteHookInputSchema } from "../hook/schemas.js";
 import { SyncEngine } from "../hook/sync-engine.js";
 import { SyncLogger } from "../hook/sync-logger.js";
-import { DEFAULT_CONFIG, TodoWriteHookInputSchema } from "../hook/schemas.js";
+import { getContext } from "../lib/context.js";
 
 export const syncCommand = new Command("sync")
   .description("Sync TodoWrite input to Kaban board (reads from stdin)")
