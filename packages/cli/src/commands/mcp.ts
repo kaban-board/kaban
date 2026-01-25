@@ -130,7 +130,8 @@ async function startMcpServer(workingDirectory: string) {
           type: "object",
           properties: {
             columnId: { type: "string", description: "Filter by column ID" },
-            agent: { type: "string", description: "Filter by agent name" },
+            agent: { type: "string", description: "Filter by creator agent name" },
+            assignee: { type: "string", description: "Filter by assigned agent name" },
             blocked: { type: "boolean", description: "Show only blocked tasks" },
           },
         },

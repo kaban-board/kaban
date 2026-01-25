@@ -23,21 +23,25 @@ Persistent Kanban board for AI agent coordination. Tasks survive sessions and sy
 ### MCP Tools (Preferred)
 
 ```
-kaban_status          - board status
-kaban_list_tasks      - list tasks
-kaban_add_task        - add task
-kaban_move_task       - move between columns
-kaban_complete_task   - mark done
+kaban_status                      - board status
+kaban_list_tasks(assignee?)       - list tasks (filter by assignee)
+kaban_add_task                    - add task
+kaban_update_task(assignedTo?)    - update task / assign
+kaban_move_task                   - move between columns
+kaban_complete_task               - mark done
 ```
 
 ### CLI Fallback
 
 ```bash
-which kaban           # check installation
-kaban status          # board status
-kaban list            # list tasks
-kaban add "title"     # add task
-kaban done <id>       # complete task
+which kaban                        # check installation
+kaban status                       # board status
+kaban list                         # list tasks
+kaban list --assignee <agent>      # list MY tasks
+kaban add "title"                  # add task
+kaban assign <id> <agent>          # assign task to agent
+kaban move <id> <col> --assign     # move and claim task
+kaban done <id>                    # complete task
 ```
 
 **Install:** `npm i -g @kaban-board/cli` or `brew install beshkenadze/tap/kaban`
@@ -52,7 +56,8 @@ kaban done <id>       # complete task
 | Action | TodoWrite | Kaban |
 |--------|-----------|-------|
 | Create | `todowrite` | `kaban_add_task` |
-| Start | `status: in_progress` | `kaban_move_task → in-progress` |
+| Assign | - | `kaban assign <id> <agent>` |
+| Start | `status: in_progress` | `kaban move <id> in-progress --assign` |
 | Complete | `status: completed` | `kaban_complete_task` |
 
 Always mirror changes to both systems.
@@ -69,9 +74,14 @@ Always mirror changes to both systems.
 ## Sub-Agent Delegation
 
 ```
-1. kaban_update_task(assignedTo: "frontend-ui-ux-engineer")
-2. Task tool prompt includes Kaban task ID
-3. Sub-agent calls kaban_complete_task when done
+1. kaban assign <id> <agent-name>   # Assign task to sub-agent
+2. Task tool prompt includes:
+   - Kaban task ID
+   - Agent name for --assignee filter
+3. Sub-agent workflow:
+   - kaban list --assignee <agent-name>  # See MY tasks
+   - kaban move <id> in-progress --assign <agent-name>
+   - kaban done <id>                     # When complete
 ```
 
 ## Columns
@@ -101,8 +111,14 @@ Always mirror changes to both systems.
 | `kaban status` | Board summary |
 | `kaban add "title"` | Add task |
 | `kaban list` | List tasks |
+| `kaban list --assignee <agent>` | List agent's tasks |
+| `kaban assign <id> <agent>` | Assign task |
+| `kaban assign <id> --clear` | Unassign task |
 | `kaban move <id> <col>` | Move task |
+| `kaban move <id> <col> -A [agent]` | Move and assign |
 | `kaban done <id>` | Complete task |
+| `kaban archive` | Archive done tasks |
+| `kaban restore <id>` | Restore from archive |
 
 ### MCP Tools
 
@@ -112,8 +128,10 @@ Always mirror changes to both systems.
 | `kaban_move_task` | id, column |
 | `kaban_update_task` | id, assignedTo?, labels? |
 | `kaban_complete_task` | id |
-| `kaban_list_tasks` | columnId?, blocked? |
+| `kaban_list_tasks` | columnId?, assignee?, blocked? |
 | `kaban_status` | - |
+| `kaban_archive_tasks` | - |
+| `kaban_restore_task` | id |
 
 ## Rules
 
