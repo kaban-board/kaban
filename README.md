@@ -177,7 +177,8 @@ kaban <command> [options]
 | `kaban init` | Initialize a board |
 | `kaban add <title>` | Add a task |
 | `kaban list` | List tasks |
-| `kaban move <id> [column]` | Move a task |
+| `kaban move <id> [column]` | Move a task (with optional `--assign`) |
+| `kaban assign <id> [agent]` | Assign/unassign a task |
 | `kaban done <id>` | Mark task complete |
 | `kaban status` | Show board summary |
 | `kaban tui` | Launch interactive UI |
@@ -200,6 +201,15 @@ kaban list --column in-progress
 
 # Move task to next column
 kaban move abc123 --next
+
+# Move and assign to agent in one command
+kaban move abc123 in-progress --assign claude
+
+# Assign task to an agent
+kaban assign abc123 claude
+
+# Unassign a task
+kaban assign abc123 --clear
 
 # Mark complete
 kaban done abc123
@@ -267,6 +277,9 @@ kaban tui
 | `m` | Move task |
 | `u` | Assign user/agent |
 | `d` | Delete task |
+| `x` | Archive task |
+| `r` | Restore from archive |
+| `Tab` | Toggle archive view |
 | `?` | Show help |
 | `q` | Quit |
 
