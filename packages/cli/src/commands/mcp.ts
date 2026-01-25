@@ -270,6 +270,43 @@ async function startMcpServer(workingDirectory: string) {
         description: "Get archive statistics",
         inputSchema: { type: "object", properties: {} },
       },
+      {
+        name: "kaban_add_dependency",
+        description: "Add a dependency to a task (task cannot start until dependency is done)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string", description: "Task that depends on another" },
+            id: { type: "string", description: "Task ID - alias for taskId" },
+            dependsOnId: { type: "string", description: "Task that must be completed first" },
+          },
+          required: ["dependsOnId"],
+        },
+      },
+      {
+        name: "kaban_remove_dependency",
+        description: "Remove a dependency from a task",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string", description: "Task ID" },
+            id: { type: "string", description: "Task ID - alias" },
+            dependsOnId: { type: "string", description: "Dependency to remove" },
+          },
+          required: ["dependsOnId"],
+        },
+      },
+      {
+        name: "kaban_check_dependencies",
+        description: "Check if task dependencies are resolved",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string", description: "Task ID" },
+            id: { type: "string", description: "Task ID - alias" },
+          },
+        },
+      },
     ],
   }));
 
@@ -521,6 +558,28 @@ async function startMcpServer(workingDirectory: string) {
             activeTasks: allTasks.length,
             completedNotArchived: completedCount,
           });
+        }
+        case "kaban_add_dependency": {
+          const id = getParam(taskArgs, "taskId", "id");
+          if (!id) return errorResponse("Task ID required");
+          const { dependsOnId } = (args ?? {}) as { dependsOnId?: string };
+          if (!dependsOnId) return errorResponse("dependsOnId required");
+          const task = await taskService.addDependency(id, dependsOnId);
+          return jsonResponse(task);
+        }
+        case "kaban_remove_dependency": {
+          const id = getParam(taskArgs, "taskId", "id");
+          if (!id) return errorResponse("Task ID required");
+          const { dependsOnId } = (args ?? {}) as { dependsOnId?: string };
+          if (!dependsOnId) return errorResponse("dependsOnId required");
+          const task = await taskService.removeDependency(id, dependsOnId);
+          return jsonResponse(task);
+        }
+        case "kaban_check_dependencies": {
+          const id = getParam(taskArgs, "taskId", "id");
+          if (!id) return errorResponse("Task ID required");
+          const result = await taskService.validateDependencies(id);
+          return jsonResponse(result);
         }
         default:
           return errorResponse(`Unknown tool: ${name}`);
