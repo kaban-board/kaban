@@ -40,6 +40,18 @@ export interface SearchArchiveResult {
   total: number;
 }
 
+export interface PurgeArchiveCriteria {
+  olderThan?: Date;
+}
+
+export interface PurgeArchiveResult {
+  deletedCount: number;
+}
+
+export interface ResetBoardResult {
+  deletedCount: number;
+}
+
 export class TaskService {
   constructor(
     private db: DB,
@@ -442,5 +454,40 @@ export class TaskService {
     }));
 
     return { tasks: searchTasks, total };
+  }
+
+  async purgeArchive(criteria?: PurgeArchiveCriteria): Promise<PurgeArchiveResult> {
+    const conditions = [eq(tasks.archived, true)];
+
+    if (criteria?.olderThan) {
+      conditions.push(lt(tasks.archivedAt, criteria.olderThan));
+    }
+
+    const matchingTasks = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(...conditions));
+
+    if (matchingTasks.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    const taskIds = matchingTasks.map((t) => t.id);
+
+    await this.db.delete(tasks).where(inArray(tasks.id, taskIds));
+
+    return { deletedCount: taskIds.length };
+  }
+
+  async resetBoard(): Promise<ResetBoardResult> {
+    const allTasks = await this.db.select({ id: tasks.id }).from(tasks);
+
+    if (allTasks.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    await this.db.delete(tasks).where(sql`1=1`);
+
+    return { deletedCount: allTasks.length };
   }
 }

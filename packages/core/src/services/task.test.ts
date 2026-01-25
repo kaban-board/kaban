@@ -461,4 +461,69 @@ describe("TaskService", () => {
       expect(result.total).toBe(10);
     });
   });
+
+  describe("purgeArchive", () => {
+    test("deletes all archived tasks when no criteria", async () => {
+      const task1 = await taskService.addTask({ title: "Archived 1" });
+      const task2 = await taskService.addTask({ title: "Archived 2" });
+      const task3 = await taskService.addTask({ title: "Active task" });
+      await taskService.archiveTasks("default", { taskIds: [task1.id, task2.id] });
+
+      const result = await taskService.purgeArchive();
+
+      expect(result.deletedCount).toBe(2);
+      expect(await taskService.getTask(task1.id)).toBeNull();
+      expect(await taskService.getTask(task2.id)).toBeNull();
+      expect(await taskService.getTask(task3.id)).not.toBeNull();
+    });
+
+    test("respects olderThan criteria", async () => {
+      const task1 = await taskService.addTask({ title: "Archived 1" });
+      const task2 = await taskService.addTask({ title: "Archived 2" });
+      await taskService.archiveTasks("default", { taskIds: [task1.id, task2.id] });
+
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+
+      const task3 = await taskService.addTask({ title: "Archived 3 - newer" });
+      await taskService.archiveTasks("default", { taskIds: [task3.id] });
+
+      const archivedTask3 = await taskService.getTask(task3.id);
+      const cutoffDate = archivedTask3!.archivedAt!;
+
+      const result = await taskService.purgeArchive({ olderThan: cutoffDate });
+
+      expect(result.deletedCount).toBe(2);
+      expect(await taskService.getTask(task1.id)).toBeNull();
+      expect(await taskService.getTask(task2.id)).toBeNull();
+      expect(await taskService.getTask(task3.id)).not.toBeNull();
+    });
+
+    test("does not delete non-archived tasks", async () => {
+      const archivedTask = await taskService.addTask({ title: "Archived" });
+      const activeTask = await taskService.addTask({ title: "Active" });
+      await taskService.archiveTasks("default", { taskIds: [archivedTask.id] });
+
+      const result = await taskService.purgeArchive();
+
+      expect(result.deletedCount).toBe(1);
+      expect(await taskService.getTask(archivedTask.id)).toBeNull();
+      expect(await taskService.getTask(activeTask.id)).not.toBeNull();
+    });
+  });
+
+  describe("resetBoard", () => {
+    test("deletes all tasks", async () => {
+      const task1 = await taskService.addTask({ title: "Task 1" });
+      const task2 = await taskService.addTask({ title: "Task 2" });
+      const task3 = await taskService.addTask({ title: "Task 3" });
+      await taskService.archiveTasks("default", { taskIds: [task3.id] });
+
+      const result = await taskService.resetBoard();
+
+      expect(result.deletedCount).toBe(3);
+      expect(await taskService.getTask(task1.id)).toBeNull();
+      expect(await taskService.getTask(task2.id)).toBeNull();
+      expect(await taskService.getTask(task3.id)).toBeNull();
+    });
+  });
 });
