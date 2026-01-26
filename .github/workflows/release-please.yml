@@ -74,14 +74,17 @@ jobs:
           npm publish /tmp/kaban-board-cli-*.tgz --provenance --access public
           npm publish /tmp/kaban-board-tui-*.tgz --provenance --access public
 
+      - name: Upload npm tarballs to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: /tmp/kaban-board-*.tgz
+
   homebrew:
     needs: [release-please, publish]
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for npm propagation
-        run: sleep 60
-
       - name: Update Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v3
         with:
@@ -89,7 +92,7 @@ jobs:
           formula-path: Formula/kaban.rb
           homebrew-tap: kaban-board/homebrew-tap
           tag-name: ${{ needs.release-please.outputs.tag_name }}
-          download-url: https://registry.npmjs.org/@kaban-board/cli/-/kaban-board-cli-${{ needs.release-please.outputs.version }}.tgz
+          download-url: https://github.com/kaban-board/kaban/releases/download/${{ needs.release-please.outputs.tag_name }}/kaban-board-cli-${{ needs.release-please.outputs.version }}.tgz
           commit-message: |
             kaban ${{ needs.release-please.outputs.version }}
             
