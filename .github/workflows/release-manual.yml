@@ -91,8 +91,44 @@ jobs:
           tag_name: v${{ inputs.version }}
           generate_release_notes: true
 
-  homebrew:
+  homebrew-assets:
     needs: release
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binaries
+        run: |
+          mkdir -p dist-bin-release
+          bun build --compile --minify packages/cli/src/index.ts --outfile dist-bin-release/kaban
+          bun build --compile --minify packages/cli/src/hook-entry.ts --outfile dist-bin-release/kaban-hook
+          bun build --compile --minify packages/tui/src/index.ts --outfile dist-bin-release/kaban-tui \
+            --external @libsql/client --define "process.env.KABAN_NO_LIBSQL='true'"
+
+      - name: Package binaries
+        run: |
+          tar -czf kaban-darwin-arm64-${{ inputs.version }}.tar.gz \
+            -C dist-bin-release kaban kaban-hook kaban-tui
+
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: kaban-darwin-arm64-${{ inputs.version }}.tar.gz
+
+  homebrew:
+    needs: [release, homebrew-assets]
     runs-on: ubuntu-latest
     steps:
       - name: Update Homebrew formula
@@ -102,7 +138,7 @@ jobs:
           formula-path: Formula/kaban.rb
           homebrew-tap: kaban-board/homebrew-tap
           tag-name: v${{ inputs.version }}
-          download-url: https://github.com/kaban-board/kaban/releases/download/v${{ inputs.version }}/kaban-board-cli-${{ inputs.version }}.tgz
+          download-url: https://github.com/kaban-board/kaban/releases/download/v${{ inputs.version }}/kaban-darwin-arm64-${{ inputs.version }}.tar.gz
           commit-message: |
             kaban ${{ inputs.version }}
             
