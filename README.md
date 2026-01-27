@@ -30,6 +30,9 @@
 
 ## What is Kaban?
 
+<img width="2746" height="1442" alt="image" src="https://github.com/user-attachments/assets/58e51a45-e4db-4411-a4c7-44e8bda2a750" />
+
+
 Kaban is a terminal-based Kanban board designed for **AI code agents** and developers. It provides a structured way to manage tasks, track progress, and coordinate between human users and AI agents.
 
 **Why Kaban?**
