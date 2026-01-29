@@ -12,8 +12,7 @@ export const doneCommand = new Command("done")
     try {
       const { taskService, boardService } = await getContext();
 
-      const tasks = await taskService.listTasks();
-      const task = tasks.find((t) => t.id.startsWith(id));
+      const task = await taskService.resolveTask(id);
 
       if (!task) {
         if (json) outputError(2, `Task '${id}' not found`);

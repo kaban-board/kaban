@@ -16,8 +16,7 @@ export const moveCommand = new Command("move")
     try {
       const { taskService, boardService } = await getContext();
 
-      const tasks = await taskService.listTasks();
-      const task = tasks.find((t) => t.id.startsWith(id));
+      const task = await taskService.resolveTask(id);
 
       if (!task) {
         if (json) outputError(2, `Task '${id}' not found`);

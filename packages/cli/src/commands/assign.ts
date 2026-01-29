@@ -20,8 +20,7 @@ export const assignCommand = new Command("assign")
         process.exit(4);
       }
 
-      const tasks = await taskService.listTasks();
-      const task = tasks.find((t) => t.id.startsWith(id));
+      const task = await taskService.resolveTask(id);
 
       if (!task) {
         if (json) outputError(2, `Task '${id}' not found`);
