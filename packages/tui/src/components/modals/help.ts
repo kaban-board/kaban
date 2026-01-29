@@ -11,8 +11,11 @@ const SHORTCUTS = [
   ["m", "Move task (change status)"],
   ["u", "Assign user to task"],
   ["d", "Delete task"],
+  ["C", "Complete task (move to done)"],
   ["x", "Archive task"],
   ["r", "Restore task (archive view)"],
+  ["/", "Search archive (archive view)"],
+  ["P", "Purge archive (archive view)"],
   ["Tab", "Toggle archive view"],
   ["?", "Show/hide help"],
   ["q", "Quit"],
@@ -24,7 +27,7 @@ export function showHelpModal(state: AppState): void {
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "help-dialog",
     width: 45,
-    height: 20,
+    height: 24,
     padding: 2,
   });
 

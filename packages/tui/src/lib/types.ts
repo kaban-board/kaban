@@ -19,7 +19,9 @@ export type ModalType =
   | "viewTask"
   | "editTask"
   | "help"
-  | "quit";
+  | "quit"
+  | "searchArchive"
+  | "purgeArchive";
 
 export interface ViewTaskState {
   descriptionScrollOffset: number;

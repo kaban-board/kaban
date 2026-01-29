@@ -12,8 +12,10 @@ import {
   showEditTaskModal,
   showHelpModal,
   showMoveTaskModal,
+  showPurgeArchiveModal,
   showQuitModal,
   showRestoreTaskModal,
+  showSearchArchiveModal,
   showViewTaskModal,
 } from "../components/modals/index.js";
 import type { AppState, ModalType } from "./types.js";
@@ -214,6 +216,29 @@ const modalBindings: Record<ModalType, KeyBindings> = {
         return openArchiveModal(state);
       }
     },
+    C: async (state) => {
+      if (state.archiveViewMode) return;
+      const taskId = getSelectedTaskId(state);
+      if (!taskId) return;
+      const terminal = await state.boardService.getTerminalColumn();
+      if (!terminal) return;
+      await state.taskService.moveTask(taskId, terminal.id);
+      await refreshBoard(state);
+    },
+    "/": (state) => {
+      if (state.archiveViewMode) {
+        return showSearchArchiveModal(state, async (_tasks) => {
+          await refreshBoard(state);
+        });
+      }
+    },
+    P: (state) => {
+      if (state.archiveViewMode) {
+        return showPurgeArchiveModal(state, async () => {
+          await refreshBoard(state);
+        });
+      }
+    },
     tab: toggleArchiveView,
     return: openViewModal,
     "?": showHelpModal,
@@ -303,6 +328,14 @@ const modalBindings: Record<ModalType, KeyBindings> = {
   },
   quit: {
     y: quit,
+    n: closeModal,
+    escape: closeModal,
+  },
+  searchArchive: {
+    escape: closeModal,
+  },
+  purgeArchive: {
+    y: confirmModal,
     n: closeModal,
     escape: closeModal,
   },
