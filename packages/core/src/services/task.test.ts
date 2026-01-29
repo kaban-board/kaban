@@ -982,5 +982,138 @@ describe("TaskService", () => {
 
       expect(auditRows).toHaveLength(1);
     });
+
+    test("logs description change from NULL to value", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.updateTask(task.id, { description: "Added description" }, undefined, "user");
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "description")));
+
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0].oldValue).toBeNull();
+      expect(auditRows[0].newValue).toBe("Added description");
+    });
+
+    test("logs description change from value to NULL", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.updateTask(task.id, { description: "Has description" }, undefined, "user");
+      await taskService.updateTask(task.id, { description: null }, undefined, "user");
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "description")));
+
+      expect(auditRows).toHaveLength(2);
+      expect(auditRows[1].oldValue).toBe("Has description");
+      expect(auditRows[1].newValue).toBeNull();
+    });
+
+    test("logs assigned_to change", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.updateTask(task.id, { assignedTo: "claude" }, undefined, "user");
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "assignedTo")));
+
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0].oldValue).toBeNull();
+      expect(auditRows[0].newValue).toBe("claude");
+      expect(auditRows[0].actor).toBe("user");
+    });
+
+    test("logs assigned_to unassignment", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.updateTask(task.id, { assignedTo: "claude" }, undefined, "user");
+      await taskService.updateTask(task.id, { assignedTo: null }, undefined, "user");
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "assignedTo")));
+
+      expect(auditRows).toHaveLength(2);
+      expect(auditRows[1].oldValue).toBe("claude");
+      expect(auditRows[1].newValue).toBeNull();
+    });
+
+    test("logs archive status change", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.archiveTasks({ taskIds: [task.id] });
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "archived")));
+
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0].oldValue).toBe("0");
+      expect(auditRows[0].newValue).toBe("1");
+    });
+
+    test("logs labels change", async () => {
+      const task = await taskService.addTask({ title: "Test" });
+      await taskService.updateTask(task.id, { labels: ["bug", "urgent"] }, undefined, "user");
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.fieldName, "labels")));
+
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0].newValue).toBe('["bug","urgent"]');
+    });
+
+    test("logs multiple field changes in single update", async () => {
+      const task = await taskService.addTask({ title: "Original" });
+      await taskService.updateTask(
+        task.id,
+        { title: "Updated", description: "New desc", assignedTo: "claude" },
+        undefined,
+        "agent"
+      );
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(and(eq(audits.objectId, task.id), eq(audits.eventType, "UPDATE")));
+
+      expect(auditRows.length).toBeGreaterThanOrEqual(3);
+      const fields = auditRows.map((r) => r.fieldName);
+      expect(fields).toContain("title");
+      expect(fields).toContain("description");
+      expect(fields).toContain("assignedTo");
+    });
+
+    test("does not log unchanged fields", async () => {
+      const task = await taskService.addTask({ title: "Test", description: "Desc" });
+      const beforeCount = (await db.select().from(audits)).length;
+
+      await taskService.updateTask(task.id, { title: "Test" }, undefined, "user");
+
+      const afterCount = (await db.select().from(audits)).length;
+      expect(afterCount).toBe(beforeCount);
+    });
+
+    test("tracks correct actor for each operation", async () => {
+      const task = await taskService.addTask({ title: "Test", createdBy: "user1" });
+      await taskService.updateTask(task.id, { title: "Updated by agent" }, undefined, "agent-claude");
+      await taskService.moveTask(task.id, "in_progress", { actor: "agent-gemini" });
+
+      const auditRows = await db
+        .select()
+        .from(audits)
+        .where(eq(audits.objectId, task.id))
+        .orderBy(audits.id);
+
+      expect(auditRows[0].actor).toBe("user1");
+      expect(auditRows[1].actor).toBe("agent-claude");
+      expect(auditRows[2].actor).toBe("agent-gemini");
+    });
   });
 });
