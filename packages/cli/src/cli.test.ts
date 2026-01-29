@@ -13,6 +13,12 @@ function run(cmd: string): string {
   });
 }
 
+interface ExecError extends Error {
+  stdout?: Buffer | string;
+  stderr?: Buffer | string;
+  status?: number;
+}
+
 function runCli(args: string[]): { stdout: string; stderr: string; exitCode: number } {
   try {
     const quotedArgs = args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`).join(" ");
@@ -21,11 +27,12 @@ function runCli(args: string[]): { stdout: string; stderr: string; exitCode: num
       encoding: "utf-8",
     });
     return { stdout, stderr: "", exitCode: 0 };
-  } catch (error: any) {
+  } catch (error) {
+    const e = error as ExecError;
     return {
-      stdout: error.stdout?.toString() || "",
-      stderr: error.stderr?.toString() || error.message || "",
-      exitCode: error.status || 1,
+      stdout: e.stdout?.toString() || "",
+      stderr: e.stderr?.toString() || e.message || "",
+      exitCode: e.status || 1,
     };
   }
 }
@@ -65,18 +72,18 @@ describe("CLI Integration", () => {
      const statusOutput = run("status");
      expect(statusOutput).toContain("Test Board");
 
-     const taskId = jsonResponse.data[0].id.slice(0, 8);
+     const taskId = jsonResponse.data[0].id;
      run(`move ${taskId} in_progress`);
 
      const afterMove = run("list --json");
      const afterMoveResponse = JSON.parse(afterMove);
-     const movedTask = afterMoveResponse.data.find((t: { id: string }) => t.id.startsWith(taskId));
+     const movedTask = afterMoveResponse.data.find((t: { id: string }) => t.id === taskId);
      expect(movedTask.columnId).toBe("in_progress");
 
      run(`done ${taskId}`);
      const afterDone = run("list --json");
      const afterDoneResponse = JSON.parse(afterDone);
-     const doneTask = afterDoneResponse.data.find((t: { id: string }) => t.id.startsWith(taskId));
+     const doneTask = afterDoneResponse.data.find((t: { id: string }) => t.id === taskId);
      expect(doneTask.columnId).toBe("done");
      expect(doneTask.completedAt).not.toBeNull();
    });
@@ -102,11 +109,10 @@ describe("assign command", () => {
     expect(assignOut).toContain("Assigned");
     expect(assignOut).toContain("claude");
     
-    // Verify actual assignment in database
     const { stdout: listOut } = runCli(["list", "--json"]);
     const response = JSON.parse(listOut);
     const tasks = response.data;
-    const task = tasks.find((t: any) => t.id.startsWith(id));
+    const task = tasks.find((t: { id: string }) => t.id.startsWith(id!));
     expect(task.assignedTo).toBe("claude");
   });
 
@@ -119,11 +125,10 @@ describe("assign command", () => {
     expect(exitCode).toBe(0);
     expect(clearOut).toContain("Unassigned");
     
-    // Verify unassignment
     const { stdout: listOut } = runCli(["list", "--json"]);
     const response = JSON.parse(listOut);
     const tasks = response.data;
-    const task = tasks.find((t: any) => t.id.startsWith(id));
+    const task = tasks.find((t: { id: string }) => t.id.startsWith(id!));
     expect(task.assignedTo).toBeNull();
   });
 
@@ -166,16 +171,16 @@ describe("assign command", () => {
     expect(result.data.id).toBeDefined();
   });
 
-   test("fails when assigning archived task", async () => {
+   test("can assign archived task (resolveTask finds archived tasks)", async () => {
      const { stdout } = runCli(["add", "Test task"]);
      const id = stdout.match(/\[([^\]]+)\]/)?.[1];
      
      runCli(["move", id!, "done"]);
      runCli(["archive"]);
      
-     const { stderr, exitCode } = runCli(["assign", id!, "claude"]);
-     expect(exitCode).not.toBe(0);
-     expect(stderr).toContain("not found"); // Archived tasks not in active list
+     const { stdout: assignOut, exitCode } = runCli(["assign", id!, "claude"]);
+     expect(exitCode).toBe(0);
+     expect(assignOut).toContain("Assigned");
    });
 });
 
@@ -204,7 +209,7 @@ describe("move --assign", () => {
     const { stdout: listOut } = runCli(["list", "--json"]);
     const response = JSON.parse(listOut);
     const tasks = response.data;
-    const task = tasks.find((t: any) => t.id.startsWith(id));
+    const task = tasks.find((t: { id: string }) => t.id.startsWith(id!));
     expect(task.assignedTo).toBe("claude");
   });
 
@@ -218,7 +223,7 @@ describe("move --assign", () => {
     const { stdout: listOut } = runCli(["list", "--json"]);
     const response = JSON.parse(listOut);
     const tasks = response.data;
-    const task = tasks.find((t: any) => t.id.startsWith(id));
+    const task = tasks.find((t: { id: string }) => t.id.startsWith(id!));
     expect(task.assignedTo).toBeTruthy();
   });
 
@@ -243,7 +248,7 @@ describe("move --assign", () => {
     const { stdout: listOut } = runCli(["list", "--json"]);
     const response = JSON.parse(listOut);
     const tasks = response.data;
-    const task = tasks.find((t: any) => t.id.startsWith(id));
+    const task = tasks.find((t: { id: string }) => t.id.startsWith(id!));
     expect(task.assignedTo).toBe("claude");
     expect(task.columnId).toBe("in_progress");
   });
@@ -258,5 +263,273 @@ describe("move --assign", () => {
     expect(exitCode).toBe(0);
     const result = JSON.parse(jsonOut);
     expect(result.data.assignedTo).toBe("claude");
+  });
+});
+
+describe("get command", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+    mkdirSync(TEST_DIR, { recursive: true });
+    run("init --name 'Test Board'");
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  });
+
+  test("gets task by full ID", async () => {
+    const { stdout } = runCli(["add", "Test task", "--description", "Test description"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: listOut } = runCli(["list", "--json"]);
+    const response = JSON.parse(listOut);
+    const fullId = response.data.find((t: { id: string }) => t.id.startsWith(id!))?.id;
+    
+    const { stdout: getOut, exitCode } = runCli(["get", fullId]);
+    expect(exitCode).toBe(0);
+    expect(getOut).toContain("Test task");
+    expect(getOut).toContain("Test description");
+  });
+
+  test("gets task by partial ID", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: getOut, exitCode } = runCli(["get", id!]);
+    expect(exitCode).toBe(0);
+    expect(getOut).toContain("Test task");
+  });
+
+  test("returns JSON with --json flag", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: jsonOut, exitCode } = runCli(["get", id!, "--json"]);
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.title).toBe("Test task");
+    expect(result.data.id).toContain(id);
+  });
+
+  test("fails for non-existent task", async () => {
+    const { stderr, exitCode } = runCli(["get", "nonexistent"]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("not found");
+  });
+});
+
+describe("edit command", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+    mkdirSync(TEST_DIR, { recursive: true });
+    run("init --name 'Test Board'");
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  });
+
+  test("edits task title", async () => {
+    const { stdout } = runCli(["add", "Original title"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: editOut, exitCode } = runCli(["edit", id!, "--title", "New title"]);
+    expect(exitCode).toBe(0);
+    expect(editOut).toContain("New title");
+    
+    const { stdout: getOut } = runCli(["get", id!, "--json"]);
+    const result = JSON.parse(getOut);
+    expect(result.data.title).toBe("New title");
+  });
+
+  test("edits task description", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { exitCode } = runCli(["edit", id!, "--description", "New description"]);
+    expect(exitCode).toBe(0);
+    
+    const { stdout: getOut } = runCli(["get", id!, "--json"]);
+    const result = JSON.parse(getOut);
+    expect(result.data.description).toBe("New description");
+  });
+
+  test("clears description with --clear-description", async () => {
+    const { stdout } = runCli(["add", "Test task", "--description", "Original"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { exitCode } = runCli(["edit", id!, "--clear-description"]);
+    expect(exitCode).toBe(0);
+    
+    const { stdout: getOut } = runCli(["get", id!, "--json"]);
+    const result = JSON.parse(getOut);
+    expect(result.data.description).toBeNull();
+  });
+
+  test("edits labels", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { exitCode } = runCli(["edit", id!, "--labels", "bug, urgent"]);
+    expect(exitCode).toBe(0);
+    
+    const { stdout: getOut } = runCli(["get", id!, "--json"]);
+    const result = JSON.parse(getOut);
+    expect(result.data.labels).toContain("bug");
+    expect(result.data.labels).toContain("urgent");
+  });
+
+  test("fails without any update options", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stderr, exitCode } = runCli(["edit", id!]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("No updates specified");
+  });
+
+  test("returns JSON with --json flag", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: jsonOut, exitCode } = runCli(["edit", id!, "--title", "Updated", "--json"]);
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.title).toBe("Updated");
+  });
+});
+
+describe("delete command", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+    mkdirSync(TEST_DIR, { recursive: true });
+    run("init --name 'Test Board'");
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  });
+
+  test("deletes task with --force", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: deleteOut, exitCode } = runCli(["delete", id!, "--force"]);
+    expect(exitCode).toBe(0);
+    expect(deleteOut).toContain("Deleted");
+    
+    const { stdout: listOut } = runCli(["list", "--json"]);
+    const response = JSON.parse(listOut);
+    expect(response.data.length).toBe(0);
+  });
+
+  test("returns JSON with --json flag", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    
+    const { stdout: jsonOut, exitCode } = runCli(["delete", id!, "--force", "--json"]);
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.deleted).toBe(true);
+  });
+
+  test("fails for non-existent task", async () => {
+    const { stderr, exitCode } = runCli(["delete", "nonexistent", "--force"]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("not found");
+  });
+});
+
+describe("next command", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+    mkdirSync(TEST_DIR, { recursive: true });
+    run("init --name 'Test Board'");
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  });
+
+  test("returns next task from todo column", async () => {
+    runCli(["add", "Task 1"]);
+    runCli(["add", "Task 2"]);
+    
+    const { stdout: nextOut, exitCode } = runCli(["next"]);
+    expect(exitCode).toBe(0);
+    expect(nextOut).toContain("Next:");
+    expect(nextOut).toContain("Score:");
+  });
+
+  test("returns task from specified column", async () => {
+    const { stdout } = runCli(["add", "Test task"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    runCli(["move", id!, "in_progress"]);
+    
+    const { stdout: nextOut, exitCode } = runCli(["next", "--column", "in_progress"]);
+    expect(exitCode).toBe(0);
+    expect(nextOut).toContain("Test task");
+  });
+
+  test("returns JSON with --json flag", async () => {
+    runCli(["add", "Test task"]);
+    
+    const { stdout: jsonOut, exitCode } = runCli(["next", "--json"]);
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.task.title).toBe("Test task");
+    expect(result.data.score).toBeDefined();
+  });
+
+  test("handles empty column", async () => {
+    const { stdout: nextOut, exitCode } = runCli(["next"]);
+    expect(exitCode).toBe(0);
+    expect(nextOut).toContain("No actionable tasks");
+  });
+});
+
+describe("stats command", () => {
+  beforeEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+    mkdirSync(TEST_DIR, { recursive: true });
+    run("init --name 'Test Board'");
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true });
+  });
+
+  test("shows board statistics", async () => {
+    runCli(["add", "Task 1"]);
+    runCli(["add", "Task 2"]);
+    
+    const { stdout: statsOut, exitCode } = runCli(["stats"]);
+    expect(exitCode).toBe(0);
+    expect(statsOut).toContain("Board Statistics");
+    expect(statsOut).toContain("Active tasks:");
+    expect(statsOut).toContain("By Column:");
+  });
+
+  test("returns JSON with --json flag", async () => {
+    runCli(["add", "Task 1"]);
+    
+    const { stdout: jsonOut, exitCode } = runCli(["stats", "--json"]);
+    expect(exitCode).toBe(0);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.activeTasks).toBe(1);
+    expect(result.data.byColumn).toBeDefined();
+    expect(Array.isArray(result.data.byColumn)).toBe(true);
+  });
+
+  test("counts archived tasks correctly", async () => {
+    const { stdout } = runCli(["add", "Task 1"]);
+    const id = stdout.match(/\[([^\]]+)\]/)?.[1];
+    runCli(["move", id!, "done"]);
+    runCli(["archive"]);
+    
+    const { stdout: jsonOut } = runCli(["stats", "--json"]);
+    const result = JSON.parse(jsonOut);
+    expect(result.data.archivedTasks).toBe(1);
+    expect(result.data.activeTasks).toBe(0);
   });
 });
