@@ -7,6 +7,15 @@ import {
   DEFAULT_CONFIG,
   initializeSchema,
   TaskService,
+  LinkService,
+  MarkdownService,
+  ScoringService,
+  fifoScorer,
+  priorityScorer,
+  dueDateScorer,
+  createBlockingScorer,
+  type LinkType,
+  type TaskLink,
 } from "@kaban-board/core";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -64,8 +73,18 @@ async function createContext(basePath?: string) {
   const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
   const boardService = new BoardService(db);
   const taskService = new TaskService(db, boardService);
+  const linkService = new LinkService(db);
+  const markdownService = new MarkdownService();
+  const scoringService = new ScoringService();
+  scoringService.addScorer(priorityScorer);
+  scoringService.addScorer(dueDateScorer);
+  scoringService.addScorer(createBlockingScorer(async (taskId) => {
+    const blocking = await linkService.getBlocking(taskId);
+    return blocking.length;
+  }));
+  scoringService.addScorer(fifoScorer);
 
-  return { db, config, boardService, taskService };
+  return { db, config, boardService, taskService, linkService, markdownService, scoringService };
 }
 
 async function startMcpServer(workingDirectory: string) {
@@ -326,6 +345,106 @@ async function startMcpServer(workingDirectory: string) {
           required: ["title"],
         },
       },
+      {
+        name: "kaban_add_link",
+        description: "Create a link between two tasks",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sourceId: { type: "string", description: "Source task ID" },
+            targetId: { type: "string", description: "Target task ID" },
+            type: {
+              type: "string",
+              enum: ["relates_to", "blocks", "duplicates", "parent_of"],
+              description: "Link type (default: relates_to)",
+            },
+            metadata: { type: "object", description: "Optional metadata for the link" },
+          },
+          required: ["sourceId", "targetId"],
+        },
+      },
+      {
+        name: "kaban_remove_link",
+        description: "Remove a link between two tasks",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sourceId: { type: "string", description: "Source task ID" },
+            targetId: { type: "string", description: "Target task ID" },
+            type: {
+              type: "string",
+              enum: ["relates_to", "blocks", "duplicates", "parent_of"],
+              description: "Link type to remove (removes all types if not specified)",
+            },
+          },
+          required: ["sourceId", "targetId"],
+        },
+      },
+      {
+        name: "kaban_get_links",
+        description: "Get links for a task",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string", description: "Task ID" },
+            id: { type: "string", description: "Task ID - alias for taskId" },
+            direction: {
+              type: "string",
+              enum: ["outgoing", "incoming", "both"],
+              description: "Link direction to return (default: both)",
+            },
+            type: {
+              type: "string",
+              enum: ["relates_to", "blocks", "duplicates", "parent_of"],
+              description: "Filter by link type",
+            },
+          },
+        },
+      },
+      {
+        name: "kaban_get_next_task",
+        description: "Get the highest-priority task to work on next (considering dependencies, due dates, etc.)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            columnId: { type: "string", description: "Filter by column (default: todo)" },
+          },
+        },
+      },
+      {
+        name: "kaban_score_tasks",
+        description: "Get all tasks with their priority scores",
+        inputSchema: {
+          type: "object",
+          properties: {
+            columnId: { type: "string", description: "Filter by column" },
+            limit: { type: "number", description: "Max tasks to return (default: 10)" },
+          },
+        },
+      },
+      {
+        name: "kaban_export_markdown",
+        description: "Export the board to markdown format",
+        inputSchema: {
+          type: "object",
+          properties: {
+            includeArchived: { type: "boolean", description: "Include archived tasks (default: false)" },
+            includeMetadata: { type: "boolean", description: "Include task metadata (default: true)" },
+          },
+        },
+      },
+      {
+        name: "kaban_import_markdown",
+        description: "Import tasks from markdown format (creates new tasks, does not modify existing)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            markdown: { type: "string", description: "Markdown content to import" },
+            dryRun: { type: "boolean", description: "Preview import without creating tasks" },
+          },
+          required: ["markdown"],
+        },
+      },
     ],
   }));
 
@@ -367,7 +486,8 @@ async function startMcpServer(workingDirectory: string) {
         });
       }
 
-      const { taskService, boardService } = await createContext(workingDirectory);
+      const { taskService, boardService, linkService, markdownService, scoringService } =
+        await createContext(workingDirectory);
 
       const taskArgs = args as Record<string, unknown> | undefined;
       const taskId = getParam(taskArgs, "id", "taskId");
@@ -615,6 +735,110 @@ async function startMcpServer(workingDirectory: string) {
             { force },
           );
           return jsonResponse(result);
+        }
+        case "kaban_add_link": {
+          const { sourceId, targetId, type } = (args ?? {}) as {
+            sourceId?: string;
+            targetId?: string;
+            type?: string;
+          };
+          if (!sourceId) return errorResponse("sourceId required");
+          if (!targetId) return errorResponse("targetId required");
+          const linkType = (type ?? "related") as LinkType;
+          const link = await linkService.addLink(sourceId, targetId, linkType);
+          return jsonResponse(link);
+        }
+        case "kaban_remove_link": {
+          const { sourceId, targetId, type } = (args ?? {}) as {
+            sourceId?: string;
+            targetId?: string;
+            type?: string;
+          };
+          if (!sourceId) return errorResponse("sourceId required");
+          if (!targetId) return errorResponse("targetId required");
+          if (!type) return errorResponse("type required");
+          await linkService.removeLink(sourceId, targetId, type as LinkType);
+          return jsonResponse({ success: true });
+        }
+        case "kaban_get_links": {
+          const id = getParam(taskArgs, "taskId", "id");
+          if (!id) return errorResponse("Task ID required");
+          const { direction } = (args ?? {}) as {
+            direction?: "outgoing" | "incoming" | "both";
+          };
+          let links: TaskLink[];
+          if (direction === "outgoing") {
+            links = await linkService.getLinksFrom(id);
+          } else if (direction === "incoming") {
+            links = await linkService.getLinksTo(id);
+          } else {
+            links = await linkService.getAllLinks(id);
+          }
+          return jsonResponse(links);
+        }
+        case "kaban_get_next_task": {
+          const { columnId } = (args ?? {}) as { columnId?: string };
+          const allTasks = await taskService.listTasks({ columnId: columnId ?? "todo" });
+          const unblockedTasks = allTasks.filter((t) => !t.blockedReason && t.dependsOn.length === 0);
+          if (unblockedTasks.length === 0) {
+            return jsonResponse({ message: "No actionable tasks found", task: null });
+          }
+          const ranked = await scoringService.rankTasks(unblockedTasks);
+          return jsonResponse(ranked[0]);
+        }
+        case "kaban_score_tasks": {
+          const { columnId, limit } = (args ?? {}) as { columnId?: string; limit?: number };
+          const allTasks = await taskService.listTasks(columnId ? { columnId } : undefined);
+          const ranked = await scoringService.rankTasks(allTasks);
+          return jsonResponse(ranked.slice(0, limit ?? 10));
+        }
+        case "kaban_export_markdown": {
+          const { includeArchived, includeMetadata } = (args ?? {}) as {
+            includeArchived?: boolean;
+            includeMetadata?: boolean;
+          };
+          const board = await boardService.getBoard();
+          const columns = await boardService.getColumns();
+          const allTasks = await taskService.listTasks({ includeArchived });
+          const tasksByColumn = new Map<string, typeof allTasks>();
+          for (const task of allTasks) {
+            const existing = tasksByColumn.get(task.columnId) ?? [];
+            existing.push(task);
+            tasksByColumn.set(task.columnId, existing);
+          }
+          const markdown = markdownService.exportBoard(
+            { name: board?.name ?? "Kaban Board" },
+            columns,
+            tasksByColumn,
+            { includeArchived, includeMetadata: includeMetadata ?? true },
+          );
+          return jsonResponse({ markdown });
+        }
+        case "kaban_import_markdown": {
+          const { markdown, dryRun } = (args ?? {}) as { markdown?: string; dryRun?: boolean };
+          if (!markdown) return errorResponse("markdown content required");
+          const parseResult = markdownService.parseMarkdown(markdown);
+          if (parseResult.errors.length > 0) {
+            return jsonResponse({ success: false, errors: parseResult.errors, parsed: parseResult });
+          }
+          if (dryRun) {
+            return jsonResponse({ dryRun: true, parsed: parseResult });
+          }
+          const createdTasks = [];
+          for (const column of parseResult.columns) {
+            for (const task of column.tasks) {
+              const created = await taskService.addTask({
+                title: task.title,
+                description: task.description ?? undefined,
+                columnId: column.name.toLowerCase().replace(/\s+/g, "_"),
+                labels: task.labels,
+                assignedTo: task.assignedTo ?? undefined,
+                dueDate: task.dueDate?.toISOString(),
+              });
+              createdTasks.push(created);
+            }
+          }
+          return jsonResponse({ success: true, tasksCreated: createdTasks.length, tasks: createdTasks });
         }
         default:
           return errorResponse(`Unknown tool: ${name}`);

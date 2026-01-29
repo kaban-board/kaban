@@ -463,6 +463,7 @@ export class TaskService {
       updated_at: number;
       started_at: number | null;
       completed_at: number | null;
+      due_date: number | null;
       archived: number;
       archived_at: number | null;
       updated_by: string | null;
@@ -518,6 +519,7 @@ export class TaskService {
       updatedAt: new Date(row.updated_at),
       startedAt: row.started_at ? new Date(row.started_at) : null,
       completedAt: row.completed_at ? new Date(row.completed_at) : null,
+      dueDate: row.due_date ? new Date(row.due_date * 1000) : null,
       archived: Boolean(row.archived),
       archivedAt: row.archived_at ? new Date(row.archived_at) : null,
       updatedBy: row.updated_by,

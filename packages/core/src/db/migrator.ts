@@ -49,7 +49,12 @@ const drizzleDir = join(__dirname, "..", "..", "drizzle");
 
 function resolveSqlContent(sqlOrPath: string): string {
   // If it's a SQL statement (bundled), return as-is
-  if (sqlOrPath.includes("CREATE") || sqlOrPath.includes("INSERT") || sqlOrPath.includes("--")) {
+  if (
+    sqlOrPath.includes("CREATE") ||
+    sqlOrPath.includes("INSERT") ||
+    sqlOrPath.includes("ALTER") ||
+    sqlOrPath.includes("--")
+  ) {
     return sqlOrPath;
   }
 

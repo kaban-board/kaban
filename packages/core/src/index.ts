@@ -32,6 +32,26 @@ export {
   UpdateTaskInputSchema,
 } from "./schemas.js";
 export { BoardService } from "./services/board.js";
+export { DependencyService } from "./services/dependency.js";
+export { LinkService, type TaskLink } from "./services/link.js";
+export { type LinkType } from "./db/schema.js";
+export {
+  MarkdownService,
+  type ExportOptions,
+  type ParseResult,
+  type ParsedColumn,
+  type ParsedTask,
+} from "./services/markdown.js";
+export {
+  ScoringService,
+  createDefaultScoringService,
+  type TaskScorer,
+  type ScoredTask,
+  fifoScorer,
+  priorityScorer,
+  dueDateScorer,
+  createBlockingScorer,
+} from "./services/scoring/index.js";
 export {
   type AddTaskCheckedResult,
   type ArchiveTasksCriteria,
