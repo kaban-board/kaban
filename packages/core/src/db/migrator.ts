@@ -27,11 +27,13 @@ import journal from "../../drizzle/meta/_journal.json";
 import sql0000 from "../../drizzle/0000_init.sql";
 import sql0001 from "../../drizzle/0001_add_archived.sql";
 import sql0002 from "../../drizzle/0002_add_fts5.sql";
+import sql0003 from "../../drizzle/0003_fix_fts_compatibility.sql";
 
 const migrationSql: Record<string, string> = {
   "0000_init": sql0000,
   "0001_add_archived": sql0001,
   "0002_add_fts5": sql0002,
+  "0003_fix_fts_compatibility": sql0003,
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -28,12 +28,11 @@ export async function migrateArchiveSupport(db: DB): Promise<void> {
   await db.$runRaw("CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived)");
 
   // Create FTS5 virtual table for full-text search
+  // Simple standalone FTS (compatible with both bun:sqlite and libsql)
   // Uses unicode61 tokenizer with remove_diacritics for proper Russian language support
   await db.$runRaw(`
     CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
       id, title, description,
-      content='tasks',
-      content_rowid='rowid',
       tokenize='unicode61 remove_diacritics 2'
     )
   `);
@@ -41,33 +40,32 @@ export async function migrateArchiveSupport(db: DB): Promise<void> {
   // Create trigger to keep FTS in sync on INSERT
   await db.$runRaw(`
     CREATE TRIGGER IF NOT EXISTS tasks_fts_insert AFTER INSERT ON tasks BEGIN
-      INSERT INTO tasks_fts(rowid, id, title, description)
-      VALUES (NEW.rowid, NEW.id, NEW.title, COALESCE(NEW.description, ''));
+      INSERT INTO tasks_fts (id, title, description)
+      VALUES (NEW.id, NEW.title, COALESCE(NEW.description, ''));
     END
   `);
 
   // Create trigger to keep FTS in sync on DELETE
+  // Uses simple DELETE (compatible with libsql, unlike FTS5 'delete' command)
   await db.$runRaw(`
     CREATE TRIGGER IF NOT EXISTS tasks_fts_delete AFTER DELETE ON tasks BEGIN
-      INSERT INTO tasks_fts(tasks_fts, rowid, id, title, description)
-      VALUES('delete', OLD.rowid, OLD.id, OLD.title, COALESCE(OLD.description, ''));
+      DELETE FROM tasks_fts WHERE id = OLD.id;
     END
   `);
 
   // Create trigger to keep FTS in sync on UPDATE
   await db.$runRaw(`
     CREATE TRIGGER IF NOT EXISTS tasks_fts_update AFTER UPDATE ON tasks BEGIN
-      INSERT INTO tasks_fts(tasks_fts, rowid, id, title, description)
-      VALUES('delete', OLD.rowid, OLD.id, OLD.title, COALESCE(OLD.description, ''));
-      INSERT INTO tasks_fts(rowid, id, title, description)
-      VALUES (NEW.rowid, NEW.id, NEW.title, COALESCE(NEW.description, ''));
+      UPDATE tasks_fts 
+      SET title = NEW.title, description = COALESCE(NEW.description, '')
+      WHERE id = OLD.id;
     END
   `);
 
   // Populate FTS with existing data (only if FTS table is empty)
   await db.$runRaw(`
-    INSERT INTO tasks_fts(rowid, id, title, description)
-    SELECT rowid, id, title, COALESCE(description, '') FROM tasks
+    INSERT INTO tasks_fts (id, title, description)
+    SELECT id, title, COALESCE(description, '') FROM tasks
     WHERE NOT EXISTS (SELECT 1 FROM tasks_fts LIMIT 1)
   `);
 }

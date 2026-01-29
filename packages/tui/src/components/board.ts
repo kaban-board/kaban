@@ -37,9 +37,10 @@ export async function refreshBoard(state: AppState): Promise<void> {
   });
 
   const modeIndicator = state.archiveViewMode ? " [ARCHIVE]" : "";
+  const projectPath = ` (${state.projectRoot})`;
   const headerText = new TextRenderable(renderer, {
     id: "header-text",
-    content: t`${fg(COLORS.warning)(LOGO)} ${fg(COLORS.accent)(state.boardName)}${fg(COLORS.textMuted)(modeIndicator)}`,
+    content: t`${fg(COLORS.warning)(LOGO)} ${fg(COLORS.accent)(state.boardName)}${fg(COLORS.textMuted)(modeIndicator)}${fg(COLORS.textDim)(projectPath)}`,
   });
   header.add(headerText);
   mainContainer.add(header);

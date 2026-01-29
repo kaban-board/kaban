@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import { ExitCode, KabanError } from "../types.js";
+import { attemptRecovery } from "./recovery.js";
 import * as schema from "./schema.js";
 import { ensureDbDir } from "./utils.js";
 import type { DB } from "./types.js";
@@ -10,6 +12,25 @@ export async function createBunDb(filePath: string): Promise<DB> {
     const { drizzle } = await import("drizzle-orm/bun-sqlite");
 
     ensureDbDir(filePath);
+
+    // Auto-recovery for existing databases
+    if (existsSync(filePath)) {
+      const recovery = await attemptRecovery(filePath, () => {
+        const tempDb = new Database(filePath);
+        return {
+          query: (sql: string) => ({
+            get: () => tempDb.query(sql).get() as Record<string, unknown> | null,
+            all: () => tempDb.query(sql).all() as unknown[],
+          }),
+          run: (sql: string) => tempDb.run(sql),
+          close: () => tempDb.close(),
+        };
+      });
+      if (recovery.recovered) {
+        console.warn(`[kaban] Database recovered using ${recovery.method}`);
+      }
+    }
+
     sqlite = new Database(filePath);
     const db = drizzle({ client: sqlite, schema });
 

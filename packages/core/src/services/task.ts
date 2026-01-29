@@ -521,7 +521,7 @@ export class TaskService {
       return { deletedCount: 0 };
     }
 
-    await this.db.delete(tasks).where(sql`1=1`);
+    await this.db.delete(tasks);
 
     return { deletedCount: allTasks.length };
   }

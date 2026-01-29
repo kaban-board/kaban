@@ -63,6 +63,7 @@ export interface AppState {
   taskService: TaskService;
   boardService: BoardService;
   boardName: string;
+  projectRoot: string;
   columns: { id: string; name: string }[];
   columnPanels: BoxRenderable[];
   taskSelects: Map<string, SelectRenderable>;

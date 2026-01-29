@@ -10,6 +10,10 @@ import type { AppState } from "./lib/types.js";
 
 const POLL_INTERVAL_MS = 500;
 
+// Database client type detection helpers (supports bun:sqlite and libsql)
+type BunSqliteClient = {
+  query: (sql: string) => { get: () => Record<string, unknown> | null };
+};
 type LibsqlClient = {
   execute: (sql: string) => Promise<{ rows: unknown[][] }>;
 };
@@ -51,6 +55,7 @@ async function main() {
     taskService,
     boardService,
     boardName: board.name,
+    projectRoot,
     columns: [],
     columnPanels: [],
     taskSelects: new Map(),
@@ -73,14 +78,28 @@ async function main() {
 
   // Poll for database changes (CLI modifications)
   let lastDataVersion: number | null = null;
-  const client = (db as unknown as { $client: LibsqlClient }).$client;
+  const client = (db as unknown as { $client: unknown }).$client;
+
+  // Detect client type once at startup
+  const isBunSqlite = typeof (client as { query?: unknown }).query === "function";
 
   const checkForChanges = async () => {
     if (state.activeModal !== "none") return; // Don't refresh during modal
 
     try {
-      const result = await client.execute("PRAGMA data_version");
-      const currentVersion = result.rows[0]?.[0] as number;
+      let currentVersion: number;
+
+      if (isBunSqlite) {
+        // bun:sqlite: use .query().get()
+        const bunClient = client as BunSqliteClient;
+        const row = bunClient.query("PRAGMA data_version").get();
+        currentVersion = (row?.data_version as number) ?? 0;
+      } else {
+        // libsql: use .execute()
+        const libsqlClient = client as LibsqlClient;
+        const result = await libsqlClient.execute("PRAGMA data_version");
+        currentVersion = result.rows[0]?.[0] as number;
+      }
 
       if (lastDataVersion !== null && currentVersion !== lastDataVersion) {
         await refreshBoard(state);
