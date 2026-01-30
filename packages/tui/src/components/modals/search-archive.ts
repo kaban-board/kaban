@@ -4,20 +4,22 @@ import {
   InputRenderableEvents,
   TextRenderable,
 } from "@opentui/core";
+import type { Task } from "@kaban-board/core";
+import { MODAL_WIDTHS } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
-import type { Task } from "@kaban-board/core";
 import { createModalOverlay } from "../overlay.js";
 import { closeModal } from "./shared.js";
 
 export function showSearchArchiveModal(
   state: AppState,
-  onResults: (tasks: Task[]) => Promise<void>
+  onResults: (tasks: Task[]) => Promise<void>,
 ): void {
   const { renderer } = state;
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "search-archive-dialog",
-    width: 52,
+    width: MODAL_WIDTHS.medium,
     height: 9,
   });
 
@@ -87,11 +89,17 @@ export function showSearchArchiveModal(
 
   setImmediate(() => input.focus());
 
-  input.on(InputRenderableEvents.ENTER, async () => {
-    const query = input.getValue().trim();
-    if (!query) return;
-    const result = await state.taskService.searchArchive(query, { limit: 50 });
-    closeModal(state);
-    await onResults(result.tasks);
-  });
+   input.on(InputRenderableEvents.ENTER, async () => {
+     const query = input.value.trim();
+     if (!query) return;
+     const result = await withErrorHandling(
+       state,
+       () => state.taskService.searchArchive(query, { limit: 50 }),
+       "Failed to search archive",
+     );
+     closeModal(state);
+     if (result) {
+       await onResults(result.tasks);
+     }
+   });
 }

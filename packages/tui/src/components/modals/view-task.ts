@@ -1,4 +1,5 @@
 import { BoxRenderable, TextRenderable } from "@opentui/core";
+import { MODAL_WIDTHS } from "../../lib/constants.js";
 import { COLORS, getStatusColor } from "../../lib/theme.js";
 import type { AppState, ViewTaskActions } from "../../lib/types.js";
 import { getSelectedTaskId } from "../../lib/types.js";
@@ -11,7 +12,7 @@ import {
 import { createModalOverlay } from "../overlay.js";
 import { blurCurrentColumnSelect } from "./shared.js";
 
-const DIALOG_WIDTH = 60;
+const DIALOG_WIDTH = MODAL_WIDTHS.large;
 const DESC_VISIBLE_LINES = 4;
 const LABEL_WIDTH = 12;
 

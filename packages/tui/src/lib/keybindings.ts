@@ -4,6 +4,7 @@ import {
   closeModal,
   copyTaskId,
   focusNextEditField,
+  focusPrevEditField,
   scrollViewTaskDescription,
   showAddTaskModal,
   showArchiveTaskModal,
@@ -21,6 +22,7 @@ import {
 } from "../components/modals/index.js";
 import type { AppState, ModalType } from "./types.js";
 import { getSelectedTaskId } from "./types.js";
+import { withErrorHandling } from "./error.js";
 
 type KeyHandler = (state: AppState) => void | Promise<void>;
 type KeyBindings = Record<string, KeyHandler>;
@@ -223,8 +225,14 @@ const modalBindings: Record<ModalType, KeyBindings> = {
       if (!taskId) return;
       const terminal = await state.boardService.getTerminalColumn();
       if (!terminal) return;
-      await state.taskService.moveTask(taskId, terminal.id);
-      await refreshBoard(state);
+      const result = await withErrorHandling(
+        state,
+        () => state.taskService.moveTask(taskId, terminal.id),
+        "Failed to complete task",
+      );
+      if (result) {
+        await refreshBoard(state);
+      }
     },
     "/": (state) => {
       if (state.archiveViewMode) {
@@ -326,6 +334,7 @@ const modalBindings: Record<ModalType, KeyBindings> = {
   editTask: {
     escape: cancelEditTask,
     tab: focusNextEditField,
+    "shift+tab": focusPrevEditField,
     left: buttonSelectPrev,
     right: buttonSelectNext,
     return: editTaskSave,
@@ -357,6 +366,7 @@ export function handleKeypress(
   key: { name: string; shift: boolean },
 ): void | Promise<void> {
   const bindings = modalBindings[state.activeModal];
-  const handler = bindings[key.name] ?? bindings[WILDCARD];
+  const shiftKey = key.shift ? `shift+${key.name}` : undefined;
+  const handler = (shiftKey ? bindings[shiftKey] : undefined) ?? bindings[key.name] ?? bindings[WILDCARD];
   return handler?.(state);
 }

@@ -4,6 +4,8 @@ import {
   SelectRenderableEvents,
   TextRenderable,
 } from "@opentui/core";
+import { TRUNCATION } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { getSelectedTaskId } from "../../lib/types.js";
@@ -59,7 +61,7 @@ export async function showMoveTaskModal(
   });
   const taskText = new TextRenderable(renderer, {
     id: "move-task-text",
-    content: task.title.slice(0, 35),
+    content: task.title.slice(0, TRUNCATION.taskTitleShort),
     fg: COLORS.textMuted,
   });
   taskRow.add(taskText);
@@ -125,9 +127,17 @@ export async function showMoveTaskModal(
   columnSelect.on(SelectRenderableEvents.ITEM_SELECTED, async () => {
     const selected = columnSelect.getSelectedOption();
     if (selected?.value) {
-      await state.taskService.moveTask(taskId, selected.value as string);
+      const result = await withErrorHandling(
+        state,
+        () => state.taskService.moveTask(taskId, selected.value as string),
+        "Failed to move task",
+      );
+      closeModal(state);
+      if (result) {
+        await onMoved();
+      }
+    } else {
+      closeModal(state);
     }
-    closeModal(state);
-    await onMoved();
   });
 }

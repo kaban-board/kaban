@@ -1,4 +1,5 @@
 import { BoxRenderable, TextRenderable } from "@opentui/core";
+import { MODAL_HEIGHTS, MODAL_WIDTHS } from "../../lib/constants.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { createModalOverlay } from "../overlay.js";
@@ -27,8 +28,8 @@ export function showHelpModal(state: AppState): void {
 
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "help-dialog",
-    width: 45,
-    height: 24,
+    width: MODAL_WIDTHS.confirmation,
+    height: MODAL_HEIGHTS.large,
     padding: 2,
   });
 

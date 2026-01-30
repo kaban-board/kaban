@@ -1,16 +1,13 @@
-import { BoxRenderable, TextRenderable } from "@opentui/core";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { getSelectedTaskId } from "../../lib/types.js";
-import { createModalOverlay } from "../overlay.js";
-import { closeModal } from "./shared.js";
+import { showConfirmationModal } from "./factories/confirmation.js";
 
 export async function showDeleteTaskModal(
   state: AppState,
   onDeleted: () => Promise<void>,
 ): Promise<void> {
-  const { renderer } = state;
-
   const taskId = getSelectedTaskId(state);
   if (!taskId) {
     return;
@@ -23,80 +20,27 @@ export async function showDeleteTaskModal(
 
   state.selectedTask = task;
 
-  const { overlay, dialog } = createModalOverlay(renderer, {
-    id: "delete-task-dialog",
-    width: 45,
-    height: 10,
-    borderColor: COLORS.danger,
-  });
-
-  const titleRow = new BoxRenderable(renderer, {
-    id: "delete-title-row",
-    width: "100%",
-    height: 1,
-    justifyContent: "center",
-  });
-  const title = new TextRenderable(renderer, {
-    id: "delete-title",
-    content: "Delete Task?",
-    fg: COLORS.danger,
-  });
-  titleRow.add(title);
-
-  const spacer1 = new BoxRenderable(renderer, { id: "delete-spacer1", width: "100%", height: 1 });
-
-  const taskRow = new BoxRenderable(renderer, {
-    id: "delete-task-row",
-    width: "100%",
-    height: 1,
-  });
-  const taskText = new TextRenderable(renderer, {
-    id: "delete-task-text",
-    content: task.title.slice(0, 40),
-    fg: COLORS.text,
-  });
-  taskRow.add(taskText);
-
-  const warningRow = new BoxRenderable(renderer, {
-    id: "delete-warning-row",
-    width: "100%",
-    height: 1,
-  });
-  const warning = new TextRenderable(renderer, {
-    id: "delete-warning",
-    content: "This action cannot be undone.",
-    fg: COLORS.warning,
-  });
-  warningRow.add(warning);
-
-  const spacer2 = new BoxRenderable(renderer, { id: "delete-spacer2", width: "100%", height: 2 });
-
-  const hintRow = new BoxRenderable(renderer, {
-    id: "delete-hint-row",
-    width: "100%",
-    height: 1,
-    justifyContent: "center",
-  });
-  const hint = new TextRenderable(renderer, {
-    id: "delete-hint",
-    content: "[y] Delete  [n/Esc] Cancel",
-    fg: COLORS.textMuted,
-  });
-  hintRow.add(hint);
-
-  dialog.add(titleRow);
-  dialog.add(spacer1);
-  dialog.add(taskRow);
-  dialog.add(warningRow);
-  dialog.add(spacer2);
-  dialog.add(hintRow);
-  renderer.root.add(overlay);
-
-  state.modalOverlay = overlay;
-  state.activeModal = "deleteTask";
-  state.onModalConfirm = async () => {
-    await state.taskService.deleteTask(taskId);
-    closeModal(state);
-    await onDeleted();
-  };
+  showConfirmationModal(
+    state,
+    {
+      id: "delete-task-dialog",
+      modalType: "deleteTask",
+      title: "Delete Task?",
+      titleColor: COLORS.danger,
+      message: task.title.slice(0, 40),
+      warning: "This action cannot be undone.",
+      borderColor: COLORS.danger,
+      confirmHint: "[y] Delete  [n/Esc] Cancel",
+    },
+    async () => {
+      const result = await withErrorHandling(
+        state,
+        () => state.taskService.deleteTask(taskId),
+        "Failed to delete task",
+      );
+      if (result !== null) {
+        await onDeleted();
+      }
+    },
+  );
 }

@@ -5,8 +5,8 @@ import {
   InputRenderableEvents,
   TextRenderable,
 } from "@opentui/core";
-import type { EventEmitter } from "events";
 import { createButtonRow } from "../../lib/button-row.js";
+import { getKeyInput } from "../../lib/db-client.js";
 import { COLORS } from "../../lib/theme.js";
 
 export async function showOnboarding(renderer: CliRenderer): Promise<string> {
@@ -88,7 +88,7 @@ export async function showOnboarding(renderer: CliRenderer): Promise<string> {
 
     const spacer2 = new BoxRenderable(renderer, { id: "spacer2", width: "100%", height: 1 });
 
-    const keyEmitter = renderer.keyInput as unknown as EventEmitter;
+    const keyEmitter = getKeyInput(renderer);
 
     const doCreate = () => {
       keyEmitter.off("keypress", keyHandler);

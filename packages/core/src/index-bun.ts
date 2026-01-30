@@ -31,6 +31,15 @@ export {
   type UpdateTaskInput,
   UpdateTaskInputSchema,
 } from "./schemas.js";
+export {
+  AuditService,
+  type AuditEntry,
+  type AuditEventType,
+  type AuditFilter,
+  type AuditHistoryResult,
+  type AuditObjectType,
+  type AuditStats,
+} from "./services/audit.js";
 export { BoardService } from "./services/board.js";
 export {
   type AddTaskCheckedResult,

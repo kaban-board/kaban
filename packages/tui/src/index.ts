@@ -1,22 +1,14 @@
 #!/usr/bin/env bun
 import { BoardService, createDb, TaskService } from "@kaban-board/core/bun";
 import { createCliRenderer } from "@opentui/core";
-import type { EventEmitter } from "events";
 import { refreshBoard } from "./components/board.js";
 import { showOnboarding } from "./components/modals/index.js";
+import { getDataVersion, getDbClient, getKeyInput, isBunSqlite } from "./lib/db-client.js";
 import { handleKeypress } from "./lib/keybindings.js";
 import { findKabanRoot, getKabanPaths, initializeProject } from "./lib/project.js";
 import type { AppState } from "./lib/types.js";
 
 const POLL_INTERVAL_MS = 500;
-
-// Database client type detection helpers (supports bun:sqlite and libsql)
-type BunSqliteClient = {
-  query: (sql: string) => { get: () => Record<string, unknown> | null };
-};
-type LibsqlClient = {
-  execute: (sql: string) => Promise<{ rows: unknown[][] }>;
-};
 
 async function main() {
   const renderer = await createCliRenderer({
@@ -79,28 +71,16 @@ async function main() {
 
   // Poll for database changes (CLI modifications)
   let lastDataVersion: number | null = null;
-  const client = (db as unknown as { $client: unknown }).$client;
-
-  // Detect client type once at startup
-  const isBunSqlite = typeof (client as { query?: unknown }).query === "function";
+  const client = getDbClient(db);
+  const useBunSqlite = isBunSqlite(client);
 
   const checkForChanges = async () => {
-    if (state.activeModal !== "none") return; // Don't refresh during modal
+    if (state.activeModal !== "none") return;
 
     try {
-      let currentVersion: number;
-
-      if (isBunSqlite) {
-        // bun:sqlite: use .query().get()
-        const bunClient = client as BunSqliteClient;
-        const row = bunClient.query("PRAGMA data_version").get();
-        currentVersion = (row?.data_version as number) ?? 0;
-      } else {
-        // libsql: use .execute()
-        const libsqlClient = client as LibsqlClient;
-        const result = await libsqlClient.execute("PRAGMA data_version");
-        currentVersion = result.rows[0]?.[0] as number;
-      }
+      const currentVersion = useBunSqlite
+        ? await getDataVersion(client)
+        : await getDataVersion(client);
 
       if (lastDataVersion !== null && currentVersion !== lastDataVersion) {
         await refreshBoard(state);
@@ -118,8 +98,7 @@ async function main() {
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
 
-  const keyEmitter = renderer.keyInput as unknown as EventEmitter;
-  keyEmitter.on("keypress", (key: { name: string; shift: boolean }) => {
+  getKeyInput(renderer).on("keypress", (key) => {
     handleKeypress(state, key);
   });
 }

@@ -5,13 +5,15 @@ import {
   TextRenderable,
 } from "@opentui/core";
 import { createButtonRow } from "../../lib/button-row.js";
+import { MODAL_WIDTHS } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { truncate } from "../../lib/utils.js";
 import { createModalOverlay } from "../overlay.js";
 import { closeModal } from "./shared.js";
 
-const DIALOG_WIDTH = 60;
+const DIALOG_WIDTH = MODAL_WIDTHS.large;
 const DESC_INPUT_HEIGHT = 6;
 
 export interface EditTaskCallbacks {
@@ -135,10 +137,18 @@ export async function showEditTaskModal(
     const hasChanges = newTitle !== task.title || newDescription !== (task.description ?? "");
 
     if (hasChanges) {
-      await state.taskService.updateTask(task.id, {
-        title: newTitle,
-        description: newDescription || undefined,
-      });
+      const result = await withErrorHandling(
+        state,
+        () =>
+          state.taskService.updateTask(task.id, {
+            title: newTitle,
+            description: newDescription || undefined,
+          }),
+        "Failed to save task",
+      );
+      if (!result) {
+        return;
+      }
     }
 
     closeModal(state);
@@ -231,7 +241,29 @@ export function focusNextEditField(state: AppState): void {
 }
 
 export function focusPrevEditField(state: AppState): void {
-  focusNextEditField(state);
+  if (!state.editTaskRuntime || !state.editTaskState) return;
+
+  const { titleInput, descInput } = state.editTaskRuntime;
+  const { buttonRow } = state;
+
+  switch (state.editTaskState.focusedField) {
+    case "title":
+      titleInput.blur();
+      buttonRow?.setFocused(true);
+      state.editTaskState.focusedField = "buttons";
+      break;
+    case "description":
+      descInput.blur();
+      titleInput.focus();
+      buttonRow?.setFocused(false);
+      state.editTaskState.focusedField = "title";
+      break;
+    case "buttons":
+      buttonRow?.setFocused(false);
+      descInput.focus();
+      state.editTaskState.focusedField = "description";
+      break;
+  }
 }
 
 export function saveEditTask(state: AppState): Promise<void> {

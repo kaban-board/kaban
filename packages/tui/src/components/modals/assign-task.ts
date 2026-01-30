@@ -5,6 +5,8 @@ import {
   TextRenderable,
 } from "@opentui/core";
 import { createButtonRow } from "../../lib/button-row.js";
+import { MODAL_WIDTHS, TRUNCATION } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { getSelectedTaskId } from "../../lib/types.js";
@@ -29,7 +31,7 @@ export async function showAssignTaskModal(
 
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "assign-task-dialog",
-    width: 45,
+    width: MODAL_WIDTHS.confirmation,
     height: 12,
   });
 
@@ -52,7 +54,7 @@ export async function showAssignTaskModal(
   });
   const taskText = new TextRenderable(renderer, {
     id: "assign-task-text",
-    content: task.title.slice(0, 40),
+    content: task.title.slice(0, TRUNCATION.taskTitle),
     fg: COLORS.textMuted,
   });
   taskRow.add(taskText);
@@ -88,11 +90,15 @@ export async function showAssignTaskModal(
 
   const doAssign = async () => {
     const assignee = input.value.trim();
-    await state.taskService.updateTask(taskId, {
-      assignedTo: assignee || null,
-    });
+    const result = await withErrorHandling(
+      state,
+      () => state.taskService.updateTask(taskId, { assignedTo: assignee || null }),
+      "Failed to assign task",
+    );
     closeModal(state);
-    await onAssigned();
+    if (result) {
+      await onAssigned();
+    }
   };
 
   const doCancel = () => {

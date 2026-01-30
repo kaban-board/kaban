@@ -1,5 +1,7 @@
 import { AuditService, type AuditEntry } from "@kaban-board/core/bun";
 import { BoxRenderable, TextRenderable } from "@opentui/core";
+import { MODAL_WIDTHS, TRUNCATION } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { getSelectedTaskId } from "../../lib/types.js";
@@ -7,7 +9,7 @@ import { createSectionDivider, truncate } from "../../lib/utils.js";
 import { createModalOverlay } from "../overlay.js";
 import { blurCurrentColumnSelect } from "./shared.js";
 
-const DIALOG_WIDTH = 65;
+const DIALOG_WIDTH = MODAL_WIDTHS.history;
 const MAX_ENTRIES = 15;
 
 function formatTimestamp(date: Date): string {
@@ -48,8 +50,13 @@ export async function showTaskHistoryModal(state: AppState): Promise<void> {
 
   blurCurrentColumnSelect(state);
 
-  const auditService = new AuditService(db);
-  const entries = await auditService.getTaskHistory(task.id, MAX_ENTRIES);
+   const auditService = new AuditService(db);
+   const entries = await withErrorHandling(
+     state,
+     () => auditService.getTaskHistory(task.id, MAX_ENTRIES),
+     "Failed to load task history",
+   );
+   if (!entries) return;
 
   const dialogHeight = Math.min(entries.length + 8, 20);
 
@@ -73,7 +80,7 @@ export async function showTaskHistoryModal(state: AppState): Promise<void> {
   });
   const taskTitle = new TextRenderable(renderer, {
     id: "history-task-title",
-    content: `[${task.id.slice(0, 8)}] "${truncate(task.title, 40)}"`,
+    content: `[${task.id.slice(0, TRUNCATION.taskId)}] "${truncate(task.title, TRUNCATION.taskTitle)}"`,
     fg: COLORS.accent,
   });
   titleRow.add(taskTitle);
@@ -110,7 +117,7 @@ export async function showTaskHistoryModal(state: AppState): Promise<void> {
         height: 1,
       });
 
-      let color = COLORS.textMuted;
+      let color: string = COLORS.textMuted;
       if (entry.eventType === "CREATE") color = COLORS.success;
       else if (entry.eventType === "DELETE") color = COLORS.danger;
       else color = COLORS.text;

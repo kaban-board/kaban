@@ -5,6 +5,8 @@ import {
   TextRenderable,
 } from "@opentui/core";
 import { createButtonRow } from "../../lib/button-row.js";
+import { MODAL_HEIGHTS, MODAL_WIDTHS } from "../../lib/constants.js";
+import { withErrorHandling } from "../../lib/error.js";
 import { COLORS } from "../../lib/theme.js";
 import type { AppState } from "../../lib/types.js";
 import { createModalOverlay } from "../overlay.js";
@@ -17,8 +19,8 @@ export function showAddTaskModal(state: AppState, onTaskCreated: () => Promise<v
 
   const { overlay, dialog } = createModalOverlay(renderer, {
     id: "add-task-dialog",
-    width: 52,
-    height: 11,
+    width: MODAL_WIDTHS.medium,
+    height: MODAL_HEIGHTS.medium,
   });
 
   const titleRow = new BoxRenderable(renderer, {
@@ -63,11 +65,19 @@ export function showAddTaskModal(state: AppState, onTaskCreated: () => Promise<v
 
   const doCreate = async () => {
     const taskTitle = input.value.trim();
-    if (taskTitle) {
-      await state.taskService.addTask({ title: taskTitle, columnId: column.id });
+    if (!taskTitle) {
+      closeModal(state);
+      return;
     }
+    const result = await withErrorHandling(
+      state,
+      () => state.taskService.addTask({ title: taskTitle, columnId: column.id }),
+      "Failed to create task",
+    );
     closeModal(state);
-    await onTaskCreated();
+    if (result) {
+      await onTaskCreated();
+    }
   };
 
   const doCancel = () => {
