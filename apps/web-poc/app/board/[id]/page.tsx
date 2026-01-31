@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, MoreHorizontal, Calendar, Trash2, GripVertical } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { Plus, MoreHorizontal, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -33,45 +34,11 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
+  { id: "backlog", title: "Backlog", color: "bg-slate-500" },
   { id: "todo", title: "To Do", color: "bg-slate-500" },
-  { id: "in-progress", title: "In Progress", color: "bg-blue-500" },
+  { id: "in_progress", title: "In Progress", color: "bg-blue-500" },
   { id: "review", title: "Review", color: "bg-amber-500" },
   { id: "done", title: "Done", color: "bg-emerald-500" },
-];
-
-const INITIAL_TASKS: Task[] = [
-  {
-    id: "1",
-    title: "Design System",
-    description: "Create a comprehensive design system with colors, typography, and components",
-    priority: "high",
-    dueDate: "2026-02-01",
-    columnId: "todo",
-  },
-  {
-    id: "2",
-    title: "API Integration",
-    description: "Integrate ZenStack ORM with Turso database",
-    priority: "high",
-    dueDate: "2026-02-03",
-    columnId: "in-progress",
-  },
-  {
-    id: "3",
-    title: "Authentication",
-    description: "Implement user authentication with Clerk or NextAuth",
-    priority: "medium",
-    dueDate: "2026-02-05",
-    columnId: "todo",
-  },
-  {
-    id: "4",
-    title: "Drag & Drop",
-    description: "Add drag and drop functionality for task management",
-    priority: "medium",
-    dueDate: "2026-02-02",
-    columnId: "review",
-  },
 ];
 
 const PRIORITY_COLORS = {
@@ -81,12 +48,40 @@ const PRIORITY_COLORS = {
 };
 
 export default function KanbanBoard() {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const params = useParams();
+  const boardId = params.id as string;
+  
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"high" | "medium" | "low">("medium");
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/boards/${boardId}/tasks`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
+        }
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        console.error("Error fetching tasks:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (boardId) {
+      fetchTasks();
+    }
+  }, [boardId]);
 
   const addTask = (columnId: string) => {
     if (!newTaskTitle.trim()) return;
@@ -111,10 +106,6 @@ export default function KanbanBoard() {
     setTasks(tasks.filter((t) => t.id !== taskId));
   };
 
-  const moveTask = (taskId: string, newColumnId: string) => {
-    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, columnId: newColumnId } : t)));
-  };
-
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -128,6 +119,35 @@ export default function KanbanBoard() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading board...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-2">Error loading board</p>
+          <p className="text-slate-400 text-sm">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4" 
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
@@ -138,8 +158,11 @@ export default function KanbanBoard() {
               <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
                 Kaban Board
               </h1>
-              <p className="text-slate-400">
-                ZenStack + Turso POC
+              <p className="text-slate-400 font-mono text-sm">
+                ID: {boardId}
+              </p>
+              <p className="text-slate-500 text-xs mt-1">
+                {tasks.length} tasks loaded
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -154,7 +177,7 @@ export default function KanbanBoard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-5 gap-6">
           {COLUMNS.map((column) => {
             const columnTasks = tasks.filter((t) => t.columnId === column.id);
 
