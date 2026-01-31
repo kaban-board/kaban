@@ -18,6 +18,7 @@ import {
   type LinkType,
   type TaskLink,
 } from "@kaban-board/core";
+import { McpAutoSync, getTursoConfig } from "../lib/mcp-auto-sync.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -495,60 +496,319 @@ async function startMcpServer(workingDirectory: string) {
     ],
   }));
 
-  const { getParam, errorResponse, jsonResponse } = mcpHelpers;
+   const { getParam, errorResponse, jsonResponse } = mcpHelpers;
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+   const autoSync = new McpAutoSync(getTursoConfig());
 
-    try {
-      if (name === "kaban_init") {
-        const { name: boardName = "Kaban Board", path: basePath } = (args ?? {}) as {
-          name?: string;
-          path?: string;
-        };
-        const targetPath = basePath ?? workingDirectory;
-        const { kabanDir, dbPath, configPath } = getKabanPaths(targetPath);
+   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+     const { name, arguments: args } = request.params;
 
-        if (existsSync(dbPath)) {
-          return errorResponse("Board already exists in this directory");
-        }
+     try {
+       if (name === "kaban_init") {
+         const handleInit = autoSync.wrapHandler(async (initArgs: Record<string, unknown> | undefined) => {
+           const { name: boardName = "Kaban Board", path: basePath } = (initArgs ?? {}) as {
+             name?: string;
+             path?: string;
+           };
+           const targetPath = basePath ?? workingDirectory;
+           const { kabanDir, dbPath, configPath } = getKabanPaths(targetPath);
 
-        mkdirSync(kabanDir, { recursive: true });
+           if (existsSync(dbPath)) {
+             return errorResponse("Board already exists in this directory");
+           }
 
-        const config: Config = {
-          ...DEFAULT_CONFIG,
-          board: { name: boardName },
-        };
-        writeFileSync(configPath, JSON.stringify(config, null, 2));
+           mkdirSync(kabanDir, { recursive: true });
 
-        const db = await createDb(dbPath);
-        await initializeSchema(db);
-        const boardService = new BoardService(db);
-        await boardService.initializeBoard(config);
+           const config: Config = {
+             ...DEFAULT_CONFIG,
+             board: { name: boardName },
+           };
+           writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-        return jsonResponse({
-          success: true,
-          board: boardName,
-          paths: { database: dbPath, config: configPath },
-        });
-      }
+           const db = await createDb(dbPath);
+           await initializeSchema(db);
+           const boardService = new BoardService(db);
+           await boardService.initializeBoard(config);
 
-      const { taskService, boardService, linkService, markdownService, scoringService } =
-        await createContext(workingDirectory);
+           return jsonResponse({
+             success: true,
+             board: boardName,
+             paths: { database: dbPath, config: configPath },
+           });
+         });
+         return await handleInit(args);
+       }
 
-      const taskArgs = args as Record<string, unknown> | undefined;
-      const taskId = getParam(taskArgs, "id", "taskId");
+       const { db, taskService, boardService, linkService, markdownService, scoringService } =
+         await createContext(workingDirectory);
 
-      switch (name) {
-        case "kaban_add_task": {
-          const addArgs = args as Record<string, unknown> | undefined;
-          const title = addArgs?.title;
-          if (typeof title !== "string" || !title.trim()) {
-            return errorResponse("Title required (non-empty string)");
-          }
-          const task = await taskService.addTask(args as Parameters<typeof taskService.addTask>[0]);
-          return jsonResponse(task);
-        }
+       const taskArgs = args as Record<string, unknown> | undefined;
+       const taskId = getParam(taskArgs, "id", "taskId");
+
+       const handleAddTask = autoSync.wrapHandler(async (addArgs: Record<string, unknown> | undefined) => {
+         const title = addArgs?.title;
+         if (typeof title !== "string" || !title.trim()) {
+           return errorResponse("Title required (non-empty string)");
+         }
+         const task = await taskService.addTask(addArgs as Parameters<typeof taskService.addTask>[0]);
+         return jsonResponse(task);
+       });
+
+       const handleMoveTask = autoSync.wrapHandler(async (moveArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(moveArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
+         const targetColumn = getParam(moveArgs, "columnId", "column");
+         if (!targetColumn) return errorResponse("Column ID required (use 'columnId' or 'column')");
+         const { force } = (moveArgs ?? {}) as { force?: boolean };
+         const task = await taskService.moveTask(id, targetColumn, { force });
+         return jsonResponse(task);
+       });
+
+       const handleUpdateTask = autoSync.wrapHandler(async (updateArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(updateArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
+         const {
+           taskId: _t,
+           id: _i,
+           expectedVersion,
+           ...updates
+         } = (updateArgs ?? {}) as {
+           id?: string;
+           taskId?: string;
+           expectedVersion?: number;
+           [key: string]: unknown;
+         };
+         const task = await taskService.updateTask(id, updates, expectedVersion);
+         return jsonResponse(task);
+       });
+
+       const handleAssignTask = autoSync.wrapHandler(async (assignArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(assignArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
+         const { assignee } = (assignArgs ?? {}) as { assignee?: string | null };
+         const task = await taskService.updateTask(id, { assignedTo: assignee ?? null });
+         return jsonResponse(task);
+       });
+
+       const handleDeleteTask = autoSync.wrapHandler(async (deleteArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(deleteArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
+         await taskService.deleteTask(id);
+         return jsonResponse({ success: true });
+       });
+
+       const handleCompleteTask = autoSync.wrapHandler(async (completeArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(completeArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
+         const tasks = await taskService.listTasks();
+         const task = tasks.find((t) => t.id.startsWith(id));
+         if (!task) return errorResponse(`Task '${id}' not found`);
+         const terminal = await boardService.getTerminalColumn();
+         if (!terminal) return errorResponse("No terminal column configured");
+         const completed = await taskService.moveTask(task.id, terminal.id);
+         return jsonResponse(completed);
+       });
+
+       const handleArchiveTasks = autoSync.wrapHandler(async (archiveArgs: Record<string, unknown> | undefined) => {
+         const { columnId, olderThanDays, allColumns, dryRun } = (archiveArgs ?? {}) as {
+           columnId?: string;
+           olderThanDays?: number;
+           allColumns?: boolean;
+           dryRun?: boolean;
+         };
+
+         const columns = await boardService.getColumns();
+         const terminalColumns = columns.filter((c) => c.isTerminal);
+
+         let targetColumnIds: string[] = [];
+         if (columnId) {
+           targetColumnIds = [columnId];
+         } else if (allColumns) {
+           targetColumnIds = columns.map((c) => c.id);
+         } else {
+           targetColumnIds = terminalColumns.map((c) => c.id);
+         }
+
+         if (targetColumnIds.length === 0) {
+           return jsonResponse({
+             archivedCount: 0,
+             taskIds: [],
+             message: "No columns to archive from",
+           });
+         }
+
+         const allTasks = await taskService.listTasks();
+         let tasksToArchive = allTasks.filter(
+           (t) => !t.archived && targetColumnIds.includes(t.columnId),
+         );
+
+         if (olderThanDays !== undefined) {
+           const cutoff = new Date();
+           cutoff.setDate(cutoff.getDate() - olderThanDays);
+           tasksToArchive = tasksToArchive.filter((t) => t.createdAt < cutoff);
+         }
+
+         if (tasksToArchive.length === 0) {
+           return jsonResponse({
+             archivedCount: 0,
+             taskIds: [],
+             message: "No matching tasks to archive",
+           });
+         }
+
+         if (dryRun) {
+           return jsonResponse({
+             dryRun: true,
+             wouldArchive: tasksToArchive.length,
+             taskIds: tasksToArchive.map((t) => t.id),
+             tasks: tasksToArchive.map((t) => ({
+               id: t.id,
+               title: t.title,
+               columnId: t.columnId,
+             })),
+           });
+         }
+
+         const result = await taskService.archiveTasks({
+           taskIds: tasksToArchive.map((t) => t.id),
+         });
+         return jsonResponse(result);
+       });
+
+       const handleRestoreTask = autoSync.wrapHandler(async (restoreArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(restoreArgs, "id", "taskId");
+         if (!id) return errorResponse("Task ID required");
+         const { columnId } = (restoreArgs ?? {}) as { columnId?: string };
+         const task = await taskService.restoreTask(id, columnId);
+         return jsonResponse(task);
+       });
+
+       const handlePurgeArchive = autoSync.wrapHandler(async (purgeArgs: Record<string, unknown> | undefined) => {
+         const { confirm, dryRun } = (purgeArgs ?? {}) as { confirm?: boolean; dryRun?: boolean };
+         if (!confirm) {
+           return errorResponse("Must set confirm: true to purge archive");
+         }
+         if (dryRun) {
+           const result = await taskService.searchArchive("", { limit: 1000 });
+           return jsonResponse({
+             dryRun: true,
+             wouldDelete: result.total,
+           });
+         }
+         const result = await taskService.purgeArchive();
+         return jsonResponse(result);
+       });
+
+       const handleResetBoard = autoSync.wrapHandler(async (resetArgs: Record<string, unknown> | undefined) => {
+         const { confirm, dryRun } = (resetArgs ?? {}) as { confirm?: boolean; dryRun?: boolean };
+         if (!confirm) {
+           return errorResponse("Must set confirm: true to reset board");
+         }
+         if (dryRun) {
+           const allTasks = await taskService.listTasks();
+           const archivedResult = await taskService.searchArchive("", { limit: 1000 });
+           return jsonResponse({
+             dryRun: true,
+             wouldDelete: allTasks.length + archivedResult.total,
+             activeTasks: allTasks.length,
+             archivedTasks: archivedResult.total,
+           });
+         }
+         const result = await taskService.resetBoard();
+         return jsonResponse(result);
+       });
+
+       const handleAddDependency = autoSync.wrapHandler(async (depArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(depArgs, "taskId", "id");
+         if (!id) return errorResponse("Task ID required");
+         const { dependsOnId } = (depArgs ?? {}) as { dependsOnId?: string };
+         if (!dependsOnId) return errorResponse("dependsOnId required");
+         const task = await taskService.addDependency(id, dependsOnId);
+         return jsonResponse(task);
+       });
+
+       const handleRemoveDependency = autoSync.wrapHandler(async (depArgs: Record<string, unknown> | undefined) => {
+         const id = getParam(depArgs, "taskId", "id");
+         if (!id) return errorResponse("Task ID required");
+         const { dependsOnId } = (depArgs ?? {}) as { dependsOnId?: string };
+         if (!dependsOnId) return errorResponse("dependsOnId required");
+         const task = await taskService.removeDependency(id, dependsOnId);
+         return jsonResponse(task);
+       });
+
+       const handleAddTaskChecked = autoSync.wrapHandler(async (checkedArgs: Record<string, unknown> | undefined) => {
+         const title = checkedArgs?.title;
+         if (typeof title !== "string" || !title.trim()) {
+           return errorResponse("Title required");
+         }
+         const { force, ...taskInput } = checkedArgs as {
+           force?: boolean;
+           [key: string]: unknown;
+         };
+         const result = await taskService.addTaskChecked(
+           taskInput as Parameters<typeof taskService.addTask>[0],
+           { force },
+         );
+         return jsonResponse(result);
+       });
+
+       const handleAddLink = autoSync.wrapHandler(async (linkArgs: Record<string, unknown> | undefined) => {
+         const { sourceId, targetId, type } = (linkArgs ?? {}) as {
+           sourceId?: string;
+           targetId?: string;
+           type?: string;
+         };
+         if (!sourceId) return errorResponse("sourceId required");
+         if (!targetId) return errorResponse("targetId required");
+         const linkType = (type ?? "related") as LinkType;
+         const link = await linkService.addLink(sourceId, targetId, linkType);
+         return jsonResponse(link);
+       });
+
+       const handleRemoveLink = autoSync.wrapHandler(async (linkArgs: Record<string, unknown> | undefined) => {
+         const { sourceId, targetId, type } = (linkArgs ?? {}) as {
+           sourceId?: string;
+           targetId?: string;
+           type?: string;
+         };
+         if (!sourceId) return errorResponse("sourceId required");
+         if (!targetId) return errorResponse("targetId required");
+         if (!type) return errorResponse("type required");
+         await linkService.removeLink(sourceId, targetId, type as LinkType);
+         return jsonResponse({ success: true });
+       });
+
+       const handleImportMarkdown = autoSync.wrapHandler(async (importArgs: Record<string, unknown> | undefined) => {
+         const { markdown, dryRun } = (importArgs ?? {}) as { markdown?: string; dryRun?: boolean };
+         if (!markdown) return errorResponse("markdown content required");
+         const parseResult = markdownService.parseMarkdown(markdown);
+         if (parseResult.errors.length > 0) {
+           return jsonResponse({ success: false, errors: parseResult.errors, parsed: parseResult });
+         }
+         if (dryRun) {
+           return jsonResponse({ dryRun: true, parsed: parseResult });
+         }
+         const createdTasks = [];
+         for (const column of parseResult.columns) {
+           for (const task of column.tasks) {
+             const created = await taskService.addTask({
+               title: task.title,
+               description: task.description ?? undefined,
+               columnId: column.name.toLowerCase().replace(/\s+/g, "_"),
+               labels: task.labels,
+               assignedTo: task.assignedTo ?? undefined,
+               dueDate: task.dueDate?.toISOString(),
+             });
+             createdTasks.push(created);
+           }
+         }
+         return jsonResponse({ success: true, tasksCreated: createdTasks.length, tasks: createdTasks });
+       });
+
+       switch (name) {
+         case "kaban_add_task": {
+           return await handleAddTask(args);
+         }
         case "kaban_get_task": {
           if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
           const task = await taskService.getTask(taskId);
@@ -561,53 +821,21 @@ async function startMcpServer(workingDirectory: string) {
           );
           return jsonResponse(tasks);
         }
-        case "kaban_move_task": {
-          if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
-          const targetColumn = getParam(taskArgs, "columnId", "column");
-          if (!targetColumn)
-            return errorResponse("Column ID required (use 'columnId' or 'column')");
-          const { force } = (args ?? {}) as { force?: boolean };
-          const task = await taskService.moveTask(taskId, targetColumn, { force });
-          return jsonResponse(task);
-        }
+         case "kaban_move_task": {
+           return await handleMoveTask(args);
+         }
          case "kaban_update_task": {
-           if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
-           const {
-             taskId: _t,
-             id: _i,
-             expectedVersion,
-             ...updates
-           } = (args ?? {}) as {
-             id?: string;
-             taskId?: string;
-             expectedVersion?: number;
-             [key: string]: unknown;
-           };
-           const task = await taskService.updateTask(taskId, updates, expectedVersion);
-           return jsonResponse(task);
+           return await handleUpdateTask(args);
          }
          case "kaban_assign_task": {
-           const id = getParam(taskArgs, "id", "taskId");
-           if (!id) return errorResponse("Task ID required (use 'id' or 'taskId')");
-           const { assignee } = (args ?? {}) as { assignee?: string | null };
-           const task = await taskService.updateTask(id, { assignedTo: assignee ?? null });
-           return jsonResponse(task);
+           return await handleAssignTask(args);
          }
          case "kaban_delete_task": {
-          if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
-          await taskService.deleteTask(taskId);
-          return jsonResponse({ success: true });
-        }
-        case "kaban_complete_task": {
-          if (!taskId) return errorResponse("Task ID required (use 'id' or 'taskId')");
-          const tasks = await taskService.listTasks();
-          const task = tasks.find((t) => t.id.startsWith(taskId));
-          if (!task) return errorResponse(`Task '${taskId}' not found`);
-          const terminal = await boardService.getTerminalColumn();
-          if (!terminal) return errorResponse("No terminal column configured");
-          const completed = await taskService.moveTask(task.id, terminal.id);
-          return jsonResponse(completed);
-        }
+           return await handleDeleteTask(args);
+         }
+         case "kaban_complete_task": {
+           return await handleCompleteTask(args);
+         }
         case "kaban_status": {
           const board = await boardService.getBoard();
           const columns = await boardService.getColumns();
@@ -626,117 +854,24 @@ async function startMcpServer(workingDirectory: string) {
             totalTasks: tasks.length,
           });
         }
-        case "kaban_archive_tasks": {
-          const { columnId, olderThanDays, allColumns, dryRun } = (args ?? {}) as {
-            columnId?: string;
-            olderThanDays?: number;
-            allColumns?: boolean;
-            dryRun?: boolean;
-          };
-
-          const columns = await boardService.getColumns();
-          const terminalColumns = columns.filter((c) => c.isTerminal);
-
-          let targetColumnIds: string[] = [];
-          if (columnId) {
-            targetColumnIds = [columnId];
-          } else if (allColumns) {
-            targetColumnIds = columns.map((c) => c.id);
-          } else {
-            targetColumnIds = terminalColumns.map((c) => c.id);
-          }
-
-          if (targetColumnIds.length === 0) {
-            return jsonResponse({
-              archivedCount: 0,
-              taskIds: [],
-              message: "No columns to archive from",
-            });
-          }
-
-          const allTasks = await taskService.listTasks();
-          let tasksToArchive = allTasks.filter(
-            (t) => !t.archived && targetColumnIds.includes(t.columnId),
-          );
-
-          if (olderThanDays !== undefined) {
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - olderThanDays);
-            tasksToArchive = tasksToArchive.filter((t) => t.createdAt < cutoff);
-          }
-
-          if (tasksToArchive.length === 0) {
-            return jsonResponse({
-              archivedCount: 0,
-              taskIds: [],
-              message: "No matching tasks to archive",
-            });
-          }
-
-          if (dryRun) {
-            return jsonResponse({
-              dryRun: true,
-              wouldArchive: tasksToArchive.length,
-              taskIds: tasksToArchive.map((t) => t.id),
-              tasks: tasksToArchive.map((t) => ({
-                id: t.id,
-                title: t.title,
-                columnId: t.columnId,
-              })),
-            });
-          }
-
-          const result = await taskService.archiveTasks({
-            taskIds: tasksToArchive.map((t) => t.id),
-          });
-          return jsonResponse(result);
-        }
+         case "kaban_archive_tasks": {
+           return await handleArchiveTasks(args);
+         }
         case "kaban_search_archive": {
           const { query, limit } = (args ?? {}) as { query?: string; limit?: number };
           if (!query) return errorResponse("Query required");
           const result = await taskService.searchArchive(query, { limit });
           return jsonResponse(result);
         }
-        case "kaban_restore_task": {
-          const id = getParam(taskArgs, "id", "taskId");
-          if (!id) return errorResponse("Task ID required");
-          const { columnId } = (args ?? {}) as { columnId?: string };
-          const task = await taskService.restoreTask(id, columnId);
-          return jsonResponse(task);
-        }
-        case "kaban_purge_archive": {
-          const { confirm, dryRun } = (args ?? {}) as { confirm?: boolean; dryRun?: boolean };
-          if (!confirm) {
-            return errorResponse("Must set confirm: true to purge archive");
-          }
-          if (dryRun) {
-            const result = await taskService.searchArchive("", { limit: 1000 });
-            return jsonResponse({
-              dryRun: true,
-              wouldDelete: result.total,
-            });
-          }
-          const result = await taskService.purgeArchive();
-          return jsonResponse(result);
-        }
-        case "kaban_reset_board": {
-          const { confirm, dryRun } = (args ?? {}) as { confirm?: boolean; dryRun?: boolean };
-          if (!confirm) {
-            return errorResponse("Must set confirm: true to reset board");
-          }
-          if (dryRun) {
-            const allTasks = await taskService.listTasks();
-            const archivedResult = await taskService.searchArchive("", { limit: 1000 });
-            return jsonResponse({
-              dryRun: true,
-              wouldDelete: allTasks.length + archivedResult.total,
-              activeTasks: allTasks.length,
-              archivedTasks: archivedResult.total,
-            });
-          }
-          const result = await taskService.resetBoard();
-          return jsonResponse(result);
-        }
+         case "kaban_restore_task": {
+           return await handleRestoreTask(args);
+         }
+         case "kaban_purge_archive": {
+           return await handlePurgeArchive(args);
+         }
+         case "kaban_reset_board": {
+           return await handleResetBoard(args);
+         }
         case "kaban_archive_stats": {
           const archivedResult = await taskService.searchArchive("", { limit: 1 });
           const allTasks = await taskService.listTasks();
@@ -752,68 +887,27 @@ async function startMcpServer(workingDirectory: string) {
             completedNotArchived: completedCount,
           });
         }
-        case "kaban_add_dependency": {
-          const id = getParam(taskArgs, "taskId", "id");
-          if (!id) return errorResponse("Task ID required");
-          const { dependsOnId } = (args ?? {}) as { dependsOnId?: string };
-          if (!dependsOnId) return errorResponse("dependsOnId required");
-          const task = await taskService.addDependency(id, dependsOnId);
-          return jsonResponse(task);
-        }
-        case "kaban_remove_dependency": {
-          const id = getParam(taskArgs, "taskId", "id");
-          if (!id) return errorResponse("Task ID required");
-          const { dependsOnId } = (args ?? {}) as { dependsOnId?: string };
-          if (!dependsOnId) return errorResponse("dependsOnId required");
-          const task = await taskService.removeDependency(id, dependsOnId);
-          return jsonResponse(task);
-        }
+         case "kaban_add_dependency": {
+           return await handleAddDependency(args);
+         }
+         case "kaban_remove_dependency": {
+           return await handleRemoveDependency(args);
+         }
         case "kaban_check_dependencies": {
           const id = getParam(taskArgs, "taskId", "id");
           if (!id) return errorResponse("Task ID required");
           const result = await taskService.validateDependencies(id);
           return jsonResponse(result);
         }
-        case "kaban_add_task_checked": {
-          const addCheckedArgs = args as Record<string, unknown> | undefined;
-          const title = addCheckedArgs?.title;
-          if (typeof title !== "string" || !title.trim()) {
-            return errorResponse("Title required");
-          }
-          const { force, ...taskInput } = addCheckedArgs as {
-            force?: boolean;
-            [key: string]: unknown;
-          };
-          const result = await taskService.addTaskChecked(
-            taskInput as Parameters<typeof taskService.addTask>[0],
-            { force },
-          );
-          return jsonResponse(result);
-        }
-        case "kaban_add_link": {
-          const { sourceId, targetId, type } = (args ?? {}) as {
-            sourceId?: string;
-            targetId?: string;
-            type?: string;
-          };
-          if (!sourceId) return errorResponse("sourceId required");
-          if (!targetId) return errorResponse("targetId required");
-          const linkType = (type ?? "related") as LinkType;
-          const link = await linkService.addLink(sourceId, targetId, linkType);
-          return jsonResponse(link);
-        }
-        case "kaban_remove_link": {
-          const { sourceId, targetId, type } = (args ?? {}) as {
-            sourceId?: string;
-            targetId?: string;
-            type?: string;
-          };
-          if (!sourceId) return errorResponse("sourceId required");
-          if (!targetId) return errorResponse("targetId required");
-          if (!type) return errorResponse("type required");
-          await linkService.removeLink(sourceId, targetId, type as LinkType);
-          return jsonResponse({ success: true });
-        }
+         case "kaban_add_task_checked": {
+           return await handleAddTaskChecked(args);
+         }
+         case "kaban_add_link": {
+           return await handleAddLink(args);
+         }
+         case "kaban_remove_link": {
+           return await handleRemoveLink(args);
+         }
         case "kaban_get_links": {
           const id = getParam(taskArgs, "taskId", "id");
           if (!id) return errorResponse("Task ID required");
@@ -868,32 +962,9 @@ async function startMcpServer(workingDirectory: string) {
           );
           return jsonResponse({ markdown });
         }
-        case "kaban_import_markdown": {
-          const { markdown, dryRun } = (args ?? {}) as { markdown?: string; dryRun?: boolean };
-          if (!markdown) return errorResponse("markdown content required");
-          const parseResult = markdownService.parseMarkdown(markdown);
-          if (parseResult.errors.length > 0) {
-            return jsonResponse({ success: false, errors: parseResult.errors, parsed: parseResult });
-          }
-          if (dryRun) {
-            return jsonResponse({ dryRun: true, parsed: parseResult });
-          }
-          const createdTasks = [];
-          for (const column of parseResult.columns) {
-            for (const task of column.tasks) {
-              const created = await taskService.addTask({
-                title: task.title,
-                description: task.description ?? undefined,
-                columnId: column.name.toLowerCase().replace(/\s+/g, "_"),
-                labels: task.labels,
-                assignedTo: task.assignedTo ?? undefined,
-                dueDate: task.dueDate?.toISOString(),
-              });
-              createdTasks.push(created);
-            }
-          }
-          return jsonResponse({ success: true, tasksCreated: createdTasks.length, tasks: createdTasks });
-        }
+         case "kaban_import_markdown": {
+           return await handleImportMarkdown(args);
+         }
         case "kaban_get_audit_history": {
           const { objectType, objectId, eventType, actor, limit } = (args ?? {}) as {
             objectType?: "task" | "column" | "board";

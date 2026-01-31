@@ -22,6 +22,7 @@ import { statsCommand } from "./commands/stats.js";
 import { searchCommand } from "./commands/search.js";
 import { statusCommand } from "./commands/status.js";
 import { syncCommand } from "./commands/sync.js";
+import { tursoSyncCommand } from "./commands/turso-sync.js";
 import { tuiCommand } from "./commands/tui.js";
 
 const program = new Command();
@@ -47,6 +48,7 @@ program.addCommand(statsCommand);
 program.addCommand(tuiCommand);
 program.addCommand(hookCommand);
 program.addCommand(syncCommand);
+program.addCommand(tursoSyncCommand);
 program.addCommand(archiveCommand);
 program.addCommand(restoreCommand);
 program.addCommand(purgeCommand);
