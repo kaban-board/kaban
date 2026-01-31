@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:/Users/akira/Projects/My/KabanProject/.kaban/board.db"
+}
+
+model drizzle_migrations {
+  id         Int    @id @default(autoincrement())
+  tag        String @unique(map: "sqlite_autoindex___drizzle_migrations_1")
+  created_at Int
+
+  @@map("__drizzle_migrations")
+}
+
+model audits {
+  id          Int     @id @default(autoincrement())
+  timestamp   Int     @default(dbgenerated("unixepoch()"))
+  event_type  String
+  object_type String
+  object_id   String
+  field_name  String?
+  old_value   String?
+  new_value   String?
+  actor       String?
+
+  @@index([timestamp], map: "idx_audits_timestamp")
+  @@index([object_type, object_id], map: "idx_audits_object")
+}
+
+model boards {
+  id                String   @id
+  name              String
+  created_at        Int
+  updated_at        Int
+  max_board_task_id Int      @default(0)
+  columns           columns[]
+}
+
+model columns {
+  id          String  @id
+  board_id    String
+  name        String
+  position    Int
+  wip_limit   Int?
+  is_terminal Int     @default(0)
+  boards      boards  @relation(fields: [board_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks       tasks[]
+}
+
+model task_links {
+  id                                   Int    @id @default(autoincrement())
+  from_task_id                         String
+  to_task_id                           String
+  link_type                            String
+  created_at                           Int    @default(dbgenerated("unixepoch()"))
+  tasks_task_links_to_task_idTotasks   tasks  @relation("task_links_to_task_idTotasks", fields: [to_task_id], references: [id], onDelete: Cascade, onUpdate: NoAction) @ignore
+  tasks_task_links_from_task_idTotasks tasks  @relation("task_links_from_task_idTotasks", fields: [from_task_id], references: [id], onDelete: Cascade, onUpdate: NoAction) @ignore
+
+  @@unique([from_task_id, to_task_id, link_type], map: "sqlite_autoindex_task_links_1")
+  @@index([link_type], map: "idx_task_links_type")
+  @@index([to_task_id], map: "idx_task_links_to")
+  @@index([from_task_id], map: "idx_task_links_from")
+}
+
+model tasks {
+  id                                        String       @id
+  title                                     String
+  description                               String?
+  column_id                                 String
+  position                                  Int
+  created_by                                String
+  assigned_to                               String?
+  parent_id                                 String?
+  depends_on                                String       @default("[]")
+  files                                     String       @default("[]")
+  labels                                    String       @default("[]")
+  blocked_reason                            String?
+  version                                   Int          @default(1)
+  created_at                                Int
+  updated_at                                Int
+  started_at                                Int?
+  completed_at                              Int?
+  archived                                  Int          @default(dbgenerated("false"))
+  archived_at                               Int?
+  board_task_id                             Int?
+  updated_by                                String?
+  due_date                                  Int?
+  task_links_task_links_to_task_idTotasks   task_links[] @relation("task_links_to_task_idTotasks")
+  task_links_task_links_from_task_idTotasks task_links[] @relation("task_links_from_task_idTotasks")
+  tasks                                     tasks?       @relation("tasksTotasks", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_tasks                               tasks[]      @relation("tasksTotasks")
+  columns                                   columns      @relation(fields: [column_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([archived], map: "idx_tasks_archived")
+  @@index([parent_id], map: "idx_tasks_parent")
+  @@index([column_id], map: "idx_tasks_column")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tasks_fts {
+  id          Unsupported("")?
+  title       Unsupported("")?
+  description Unsupported("")?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tasks_fts_config {
+  k Unsupported("")  @id
+  v Unsupported("")?
+
+  @@ignore
+}
+
+model tasks_fts_content {
+  id Int              @id @default(autoincrement())
+  c0 Unsupported("")?
+  c1 Unsupported("")?
+  c2 Unsupported("")?
+}
+
+model tasks_fts_data {
+  id    Int    @id @default(autoincrement())
+  block Bytes?
+}
+
+model tasks_fts_docsize {
+  id Int    @id @default(autoincrement())
+  sz Bytes?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tasks_fts_idx {
+  segid Unsupported("")
+  term  Unsupported("")
+  pgno  Unsupported("")?
+
+  @@id([segid, term])
+  @@ignore
+}
+
+model undo_log {
+  id         Int    @id @default(autoincrement())
+  operation  String
+  data       String
+  created_at Int
+}

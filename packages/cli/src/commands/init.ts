@@ -7,6 +7,7 @@ import {
   initializeSchema,
 } from "@kaban-board/core";
 import { Command } from "commander";
+import { ulid } from "ulid";
 import { getKabanPaths } from "../lib/context.js";
 
 export const initCommand = new Command("init")
@@ -24,7 +25,7 @@ export const initCommand = new Command("init")
 
     const config: Config = {
       ...DEFAULT_CONFIG,
-      board: { name: options.name },
+      board: { id: ulid(), name: options.name },
     };
     writeFileSync(configPath, JSON.stringify(config, null, 2));
 
