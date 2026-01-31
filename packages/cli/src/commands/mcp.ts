@@ -18,6 +18,7 @@ import {
   type LinkType,
   type TaskLink,
 } from "@kaban-board/core";
+import { ulid } from "ulid";
 import { McpAutoSync, getTursoConfig } from "../lib/mcp-auto-sync.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -519,10 +520,10 @@ async function startMcpServer(workingDirectory: string) {
 
            mkdirSync(kabanDir, { recursive: true });
 
-           const config: Config = {
-             ...DEFAULT_CONFIG,
-             board: { name: boardName },
-           };
+            const config: Config = {
+              ...DEFAULT_CONFIG,
+              board: { id: ulid(), name: boardName },
+            };
            writeFileSync(configPath, JSON.stringify(config, null, 2));
 
            const db = await createDb(dbPath);

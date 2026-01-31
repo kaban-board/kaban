@@ -4,6 +4,7 @@ export type { Board, Column, Config, Task } from "./schemas.js";
 
 export const DEFAULT_CONFIG: Config = {
   board: {
+    id: "01JKX8JQY3TQJJJ4TQYA9HW7S8",
     name: "Kaban Board",
   },
   columns: [

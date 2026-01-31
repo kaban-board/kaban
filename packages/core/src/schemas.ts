@@ -116,6 +116,7 @@ export const ColumnConfigSchema = z.object({
 
 export const ConfigSchema = z.object({
   board: z.object({
+    id: UlidSchema,
     name: z.string().min(1).max(100),
   }),
   columns: z.array(ColumnConfigSchema).min(1),
