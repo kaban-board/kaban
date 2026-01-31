@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4](https://github.com/kaban-board/kaban/compare/v0.3.3...v0.3.4) (2026-01-31)
+
+
+### Bug Fixes
+
+* **cli:** use static import for package.json in compiled binary ([03bb038](https://github.com/kaban-board/kaban/commit/03bb0386741acafac6679b77fdec6a5294f3b592))
+
 ## [0.3.3](https://github.com/kaban-board/kaban/compare/v0.3.2...v0.3.3) (2026-01-30)
 
 
