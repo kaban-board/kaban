@@ -11,6 +11,8 @@ export type DB = Omit<DrizzleDb, "$client"> & {
 export interface DbConfig {
   url: string;
   authToken?: string;
+  syncUrl?: string;
+  syncInterval?: number;
 }
 
 export interface CreateDbOptions {

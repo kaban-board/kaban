@@ -123,6 +123,10 @@ export const ConfigSchema = z.object({
     column: ColumnIdSchema,
     agent: AgentNameSchema,
   }),
+  driver: z.enum(["bun", "libsql"]).optional(),
+  syncUrl: z.string().optional(),
+  authToken: z.string().optional(),
+  syncInterval: z.number().int().positive().optional(),
 });
 
 export const AddTaskInputSchema = z.object({
